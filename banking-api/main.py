@@ -7,6 +7,7 @@ import uvicorn
 
 from controllers.account_controller import router as account_router
 from controllers.auth_controller import router as auth_router
+from controllers.branch_controller import router as branch_router
 from controllers.customer_controller import router as customer_router
 from controllers.transaction_controller import router as transaction_router
 from config import HOST, PORT
@@ -24,6 +25,7 @@ app.add_middleware(
 app.include_router(account_router)
 app.include_router(customer_router)
 app.include_router(transaction_router)
+app.include_router(branch_router)
 app.include_router(auth_router)
 
 STATIC_DIR = Path(__file__).parent / "static"

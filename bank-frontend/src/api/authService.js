@@ -1,5 +1,8 @@
 // Talks to the FastAPI backend (banking-api) on port 8000.
-const API_URL = 'http://127.0.0.1:8000/api/v1'
+// Use the "localhost" hostname (not the 127.0.0.1 literal): it resolves to both
+// IPv4 and IPv6 so the browser can fall back between them, which keeps the whole
+// app on one consistent host.
+const API_URL = 'http://localhost:8000/api/v1'
 const TOKEN_KEY = 'bank_token'
 
 export function getToken() {

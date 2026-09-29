@@ -4,7 +4,7 @@ import Accounts from '../components/Accounts.jsx'
 import SendMoney from '../components/SendMoney.jsx'
 import Settings from '../components/Settings.jsx'
 
-const DASHBOARD_URL = 'http://127.0.0.1:8000/'
+const DASHBOARD_URL = 'http://localhost:8000/'
 const TABS = [
   { id: 'accounts', label: 'Accounts' },
   { id: 'send', label: 'Send money' },

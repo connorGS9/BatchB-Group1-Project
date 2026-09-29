@@ -9,6 +9,17 @@ export default function App() {
 
   // On page load, see if we're still logged in from before
   useEffect(() => {
+    // Coming back from the admin dashboard's "Sign out" (…/?logout=1):
+    // clear the session, strip the flag from the URL, and show the login screen.
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('logout')) {
+      logout().finally(() => {
+        window.history.replaceState({}, '', window.location.pathname)
+        setUser(null)
+        setChecking(false)
+      })
+      return
+    }
     getCurrentUser().then((u) => {
       setUser(u)
       setChecking(false)
