@@ -94,3 +94,7 @@ IDE / Editors
 .idea/
 *.swp
 *.swo
+# Additional Python cache and credential exclusions
+__pycache__/
+*.pem
+*.key

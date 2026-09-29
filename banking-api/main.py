@@ -1,7 +1,3 @@
-from fastapi import FastAPI
+"""Group server entry point for the banking CRUD application."""
 
-app = FastAPI()
-
-@app.get("/")
-def root():
-    return {"message": "Welcome to the Banking API"}
+from app.main import app
