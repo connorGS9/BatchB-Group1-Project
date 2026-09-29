@@ -1,5 +1,6 @@
 # BatchB-Group1-Project
 ***Antonio, Dmitry, Alexander, Connor, Assim***
+
 Fullstack system in python, using fastapi, react, node.
 
 # Controller --> Service --> Repository (Model) architecture
