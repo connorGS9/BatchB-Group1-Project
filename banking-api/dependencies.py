@@ -6,7 +6,9 @@
 from repository.account_repository import AccountRepository
 from repository.customer_repository import CustomerRepository
 from repository.transaction_repository import TransactionRepository
+from repository.user_repository import UserRepository
 from services.account_service import AccountService
+from services.auth_service import AuthService
 from services.customer_service import CustomerService
 from services.transaction_service import TransactionService
 
@@ -21,3 +23,7 @@ account_service = AccountService(account_repository, customer_repository)
 # --- Transactions (depends on the shared account_service) ---
 transaction_repository = TransactionRepository()
 transaction_service = TransactionService(transaction_repository, account_service)
+
+# --- Login ---
+user_repository = UserRepository()
+auth_service = AuthService(user_repository)
