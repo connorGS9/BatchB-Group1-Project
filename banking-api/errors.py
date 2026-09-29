@@ -9,3 +9,7 @@ class NotFoundError(Exception):
 
 class ValidationError(Exception):
     """Raised when input fails a business rule (e.g. duplicate email)."""
+
+
+class AuthError(Exception):
+    """Raised when login fails or a request has no valid login token (-> 401)."""
