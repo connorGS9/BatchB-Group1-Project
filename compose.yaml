@@ -1,0 +1,46 @@
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: bank-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?set MONGO_USER in .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?set MONGO_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:27018:27017"   # host port 27018 → Mongo's 27017 inside the container   # only reachable from your own machine
+    volumes:
+      - mongo-data:/data/db # where the data is stored after container closure
+    healthcheck: # check if the database is running
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./banking-api
+      dockerfile: dockerfile
+    container_name: bank-api
+    restart: unless-stopped
+    environment:
+      MONGO_URL: ${MONGO_URL:?set MONGO_URL in .env}
+      MONGO_DB: banking
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./bank-frontend
+      dockerfile: dockerfile
+    container_name: bank-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"              # keeps the http://localhost:5173 origin that CORS in main.py already allows
+    depends_on:
+      - backend
+
+volumes:
+  mongo-data:
