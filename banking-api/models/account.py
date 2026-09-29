@@ -5,7 +5,9 @@ from pydantic import BaseModel
 
 class AccountCreate(BaseModel):
     """Fields a client supplies when opening an account.
-    id and account_number are assigned by the server."""
+    id and account_number are assigned by the server.
+    customer_id must reference an existing customer."""
+    customer_id: int
     first_name: str
     last_name: str
     balance: float = 0.0
@@ -14,6 +16,7 @@ class AccountCreate(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
+                "customer_id": 1,
                 "first_name": "John",
                 "last_name": "Doe",
                 "balance": 5000.00,
@@ -41,6 +44,7 @@ class Account(BaseModel):
     """Full account record returned by the API."""
     id: int
     account_number: str
+    customer_id: int
     first_name: str
     last_name: str
     balance: float
@@ -52,6 +56,7 @@ class Account(BaseModel):
             "example": {
                 "id": 1,
                 "account_number": "ACC001",
+                "customer_id": 1,
                 "first_name": "John",
                 "last_name": "Doe",
                 "balance": 5000.00,

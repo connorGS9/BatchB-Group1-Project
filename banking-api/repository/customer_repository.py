@@ -15,8 +15,12 @@ class CustomerRepository:
                      email="jane.smith@example.com", phone="555-0101"),
             Customer(id=3, first_name="Bob", last_name="Johnson",
                      email="bob.johnson@example.com", phone="555-0102"),
+            Customer(id=4, first_name="Alice", last_name="Brown",
+                     email="alice.brown@example.com", phone="555-0103"),
+            Customer(id=5, first_name="Charlie", last_name="Wilson",
+                     email="charlie.wilson@example.com", phone="555-0104"),
         ]
-        self._next_id = 4
+        self._next_id = 6
 
     def list_all(self) -> List[Customer]:
         return self._customers

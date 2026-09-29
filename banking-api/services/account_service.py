@@ -6,15 +6,21 @@ from typing import List, Optional
 from errors import NotFoundError, ValidationError
 from models.account import Account, AccountCreate, AccountUpdate
 from repository.account_repository import AccountRepository
+from repository.customer_repository import CustomerRepository
 
 
 class AccountService:
-    def __init__(self, repository: AccountRepository = None):
+    def __init__(self, repository: AccountRepository = None,
+                 customer_repository: CustomerRepository = None):
         self._repo = repository or AccountRepository()
+        # Used to verify an account's customer_id points at a real customer.
+        self._customers = customer_repository
 
     def list_accounts(self, branch_id: Optional[int] = None,
-                      min_balance: Optional[float] = None) -> List[Account]:
-        return self._repo.list_all(branch_id=branch_id, min_balance=min_balance)
+                      min_balance: Optional[float] = None,
+                      customer_id: Optional[int] = None) -> List[Account]:
+        return self._repo.list_all(branch_id=branch_id, min_balance=min_balance,
+                                   customer_id=customer_id)
 
     def get_account(self, account_id: int) -> Account:
         account = self._repo.get(account_id)
@@ -25,6 +31,8 @@ class AccountService:
     def create_account(self, data: AccountCreate) -> Account:
         if data.balance < 0:
             raise ValidationError("Opening balance cannot be negative")
+        if self._customers is not None and self._customers.get(data.customer_id) is None:
+            raise ValidationError(f"Customer {data.customer_id} does not exist")
         account = Account(id=0, account_number="", is_active=True, **data.model_dump())
         return self._repo.add(account)
 

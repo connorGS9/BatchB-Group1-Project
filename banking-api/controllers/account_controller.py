@@ -15,8 +15,10 @@ router = APIRouter(prefix="/api/v1/accounts", tags=["accounts"])
 def list_accounts(
     branch_id: Optional[int] = Query(None, description="Filter by branch"),
     min_balance: Optional[float] = Query(None, description="Only accounts with balance >= this"),
+    customer_id: Optional[int] = Query(None, description="Only accounts owned by this customer"),
 ):
-    return service.list_accounts(branch_id=branch_id, min_balance=min_balance)
+    return service.list_accounts(branch_id=branch_id, min_balance=min_balance,
+                                 customer_id=customer_id)
 
 
 @router.get("/{account_id}", response_model=Account)

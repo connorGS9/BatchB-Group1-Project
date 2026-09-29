@@ -111,13 +111,14 @@
     <h2>Accounts</h2>
     <div class="body">
       <div class="toolbar">
+        <div class="field"><label>Customer ID</label><input type="number" id="fCustomer" placeholder="any" /></div>
         <div class="field"><label>Branch ID</label><input type="number" id="fBranch" placeholder="any" /></div>
         <div class="field"><label>Min balance</label><input type="number" id="fMinBal" placeholder="any" step="0.01" /></div>
         <button id="applyAcctFilter">Filter</button>
         <button class="ghost" id="clearAcctFilter">Clear</button>
       </div>
       <table>
-        <thead><tr><th>ID</th><th>Account #</th><th>Name</th><th class="num">Balance</th><th>Branch</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>ID</th><th>Account #</th><th>Customer</th><th>Name</th><th class="num">Balance</th><th>Branch</th><th>Status</th><th></th></tr></thead>
         <tbody id="accountsBody"></tbody>
       </table>
     </div>
@@ -181,18 +182,19 @@ async function checkHealth() {
 
 async function loadAccounts() {
   const params = new URLSearchParams();
+  if (el("fCustomer").value) params.set("customer_id", el("fCustomer").value);
   if (el("fBranch").value) params.set("branch_id", el("fBranch").value);
   if (el("fMinBal").value) params.set("min_balance", el("fMinBal").value);
   const qs = params.toString() ? "?" + params.toString() : "";
   const accounts = await api("GET", "/accounts/" + qs);
   const body = el("accountsBody");
   body.innerHTML = "";
-  if (!accounts.length) { body.innerHTML = '<tr><td colspan="7" class="empty">No accounts match.</td></tr>'; }
+  if (!accounts.length) { body.innerHTML = '<tr><td colspan="8" class="empty">No accounts match.</td></tr>'; }
   let total = 0;
   for (const a of accounts) {
     total += a.balance;
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${a.id}</td><td>${a.account_number}</td>
+    tr.innerHTML = `<td>${a.id}</td><td>${a.account_number}</td><td>#${a.customer_id}</td>
       <td>${a.first_name} ${a.last_name}</td>
       <td class="num">${fmt(a.balance)}</td><td>${a.branch_id}</td>
       <td><span class="pill ${a.is_active ? "active" : "inactive"}">${a.is_active ? "active" : "inactive"}</span></td>
@@ -273,7 +275,7 @@ el("transferForm").addEventListener("submit", async e => {
 });
 
 el("applyAcctFilter").addEventListener("click", loadAccounts);
-el("clearAcctFilter").addEventListener("click", () => { el("fBranch").value = ""; el("fMinBal").value = ""; loadAccounts(); refreshKpis(); });
+el("clearAcctFilter").addEventListener("click", () => { el("fCustomer").value = ""; el("fBranch").value = ""; el("fMinBal").value = ""; loadAccounts(); refreshKpis(); });
 el("applyTxnFilter").addEventListener("click", loadTransactions);
 el("clearTxnFilter").addEventListener("click", () => { el("fStartDate").value = ""; el("fType").value = ""; loadTransactions(); });
 

@@ -10,13 +10,13 @@ from services.account_service import AccountService
 from services.customer_service import CustomerService
 from services.transaction_service import TransactionService
 
-# --- Accounts ---
-account_repository = AccountRepository()
-account_service = AccountService(account_repository)
-
-# --- Customers ---
+# --- Customers (built first so accounts can validate customer_id against them) ---
 customer_repository = CustomerRepository()
 customer_service = CustomerService(customer_repository)
+
+# --- Accounts (shares the customer repository to enforce the customer link) ---
+account_repository = AccountRepository()
+account_service = AccountService(account_repository, customer_repository)
 
 # --- Transactions (depends on the shared account_service) ---
 transaction_repository = TransactionRepository()
