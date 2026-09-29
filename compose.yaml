@@ -23,7 +23,7 @@ services:
     container_name: bank-api
     restart: unless-stopped
     environment:
-      MONGO_URL: ${MONGO_URL:?set MONGO_URL in .env}
+      MONGO_URL: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo:27017/banking?authSource=admin
       MONGO_DB: banking
     ports:
       - "8000:8000"

@@ -11,6 +11,7 @@ from controllers.branch_controller import router as branch_router
 from controllers.customer_controller import router as customer_router
 from controllers.transaction_controller import router as transaction_router
 from config import HOST, PORT
+from db import client
 
 app = FastAPI(title="Banking API")
 
@@ -39,7 +40,8 @@ def dashboard():
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    client.admin.command("ping")   # raises if Mongo is unreachable or auth fails
+    return {"status": "ok", "mongo": "connected"}
 
 
 if __name__ == "__main__":
