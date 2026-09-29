@@ -94,3 +94,11 @@ IDE / Editors
 .idea/
 *.swp
 *.swo
+
+=========================
+Node / frontend (bank-frontend)
+=========================
+
+node_modules/
+.vite/
+dist/
