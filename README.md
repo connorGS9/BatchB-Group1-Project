@@ -7,4 +7,4 @@ Fullstack system in python, using fastapi, react, node.
 Controller package: CustomerController, AccountController, AuthController 
 ***Each handles the endpoints relating to the specific model and auth handles auth endpoints***
 
-# FrontEnd and Backend are split into two packages and must currently be ran separately using uvicorn(backend) and npm(frontend)
+# Run by using the command: 'docker compose up' from the root directory
