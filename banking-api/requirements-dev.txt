@@ -1,3 +1,5 @@
 # Test-only dependencies. Not installed in the Docker image.
 #   pip install -r requirements.txt -r requirements-dev.txt
 pytest==8.*
+mongomock==4.*   # in-memory MongoDB so tests run without a real Mongo container
+httpx==0.28.*    # required by FastAPI's TestClient for the API-layer tests
