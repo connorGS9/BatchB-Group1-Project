@@ -1,42 +1,32 @@
 {
   "info": {
+    "_postman_id": "926f6e5c-17ea-4534-a7e4-1e3a57931580",
     "name": "Bank System API Suite",
-    "description": "Banking API requests. Select the 'Bank System - Local' environment before running.",
+    "description": "Automated API tests for the Group 1 banking API. Select the \"Bank System - Local\" environment, start the app with `docker compose up`, then Run the collection. It creates its own test customer and accounts, so John's demo data is not changed.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "event": [
-    {
-      "listen": "prerequest",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          ""
-        ]
-      }
-    },
-    {
-      "listen": "test",
-      "script": {
-        "type": "text/javascript",
-        "exec": [
-          ""
-        ]
-      }
-    }
-  ],
   "item": [
     {
-      "name": "Health",
+      "name": "0. Health",
+      "description": "",
       "item": [
         {
-          "name": "Health check",
+          "name": "Health check - API and MongoDB are up",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"MongoDB is connected\", function () {",
+                  "    pm.expect(pm.response.json().mongo).to.eql(\"connected\");",
+                  "});",
+                  "pm.test(\"Responds in under 2 seconds\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
                 ]
               }
             }
@@ -58,17 +48,28 @@
       ]
     },
     {
-      "name": "Auth",
+      "name": "1. Auth (login)",
+      "description": "",
       "item": [
         {
-          "name": "Login",
+          "name": "Login - correct password",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Returns a token and the user (without password hash)\", function () {",
+                  "    pm.expect(body.token).to.be.a(\"string\").and.not.empty;",
+                  "    pm.expect(body.user.username).to.eql(\"john\");",
+                  "    pm.expect(body.user).to.not.have.property(\"password_hash\");",
+                  "});",
+                  "// Save the token so the next requests can use {{token}}",
+                  "pm.environment.set(\"token\", body.token);"
                 ]
               }
             }
@@ -105,14 +106,68 @@
           }
         },
         {
-          "name": "Current user",
+          "name": "Login - wrong password",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"Incorrect username or password\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"john\",\n  \"password\": \"wrong-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Me - who is logged in",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Token belongs to John\", function () {",
+                  "    pm.expect(pm.response.json().username).to.eql(\"john\");",
+                  "});"
                 ]
               }
             }
@@ -138,115 +193,53 @@
               ]
             }
           }
-        },
-        {
-          "name": "Logout",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/auth/logout",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "logout"
-              ]
-            }
-          }
         }
       ]
     },
     {
-      "name": "Customers",
+      "name": "2. Customers (CRUD)",
+      "description": "",
       "item": [
-        {
-          "name": "List customers",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/customers/",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "customers"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get customer",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/customers/{{customer_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "customers",
-                "{{customer_id}}"
-              ]
-            }
-          }
-        },
         {
           "name": "Create customer",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Pre-request script: make a unique email every run, so \"Create\" never",
+                  "// fails with \"email already in use\".",
+                  "pm.environment.set(\"test_email\", \"postman.\" + Date.now() + \"@example.com\");"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "const customerSchema = {",
+                  "    type: \"object\",",
+                  "    required: [\"id\", \"first_name\", \"last_name\", \"email\", \"phone\", \"is_active\"],",
+                  "    properties: {",
+                  "        id: { type: \"integer\" }, first_name: { type: \"string\" }, last_name: { type: \"string\" },",
+                  "        email: { type: \"string\" }, phone: { type: \"string\" }, is_active: { type: \"boolean\" }",
+                  "    }",
+                  "};",
+                  "const customer = pm.response.json();",
+                  "pm.test(\"Response matches the Customer schema\", function () {",
+                  "    pm.response.to.have.jsonSchema(customerSchema);",
+                  "});",
+                  "pm.test(\"Saved the data we sent\", function () {",
+                  "    pm.expect(customer.email).to.eql(pm.environment.get(\"test_email\"));",
+                  "    pm.expect(customer.is_active).to.be.true;",
+                  "});",
+                  "// Save the new id so the next requests can use {{customer_id}}",
+                  "pm.environment.set(\"customer_id\", customer.id);"
                 ]
               }
             }
@@ -272,7 +265,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"first_name\": \"Test\",\n  \"last_name\": \"User\",\n  \"email\": \"test.user.{{$timestamp}}@example.com\",\n  \"phone\": \"555-0199\"\n}",
+              "raw": "{\n  \"first_name\": \"Postman\",\n  \"last_name\": \"Tester\",\n  \"email\": \"{{test_email}}\",\n  \"phone\": \"555-0199\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -282,14 +275,67 @@
           }
         },
         {
-          "name": "Update customer",
+          "name": "Get customer by id",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const customerSchema = {",
+                  "    type: \"object\",",
+                  "    required: [\"id\", \"first_name\", \"last_name\", \"email\", \"phone\", \"is_active\"],",
+                  "    properties: {",
+                  "        id: { type: \"integer\" }, first_name: { type: \"string\" }, last_name: { type: \"string\" },",
+                  "        email: { type: \"string\" }, phone: { type: \"string\" }, is_active: { type: \"boolean\" }",
+                  "    }",
+                  "};",
+                  "pm.test(\"Response matches the Customer schema\", function () {",
+                  "    pm.response.to.have.jsonSchema(customerSchema);",
+                  "});",
+                  "pm.test(\"It is the customer we created\", function () {",
+                  "    pm.expect(pm.response.json().id).to.eql(Number(pm.environment.get(\"customer_id\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customers/{{customer_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{customer_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update customer phone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Phone was updated, name unchanged\", function () {",
+                  "    const c = pm.response.json();",
+                  "    pm.expect(c.phone).to.eql(\"555-0123\");",
+                  "    pm.expect(c.first_name).to.eql(\"Postman\");",
+                  "});"
                 ]
               }
             }
@@ -316,7 +362,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"phone\": \"555-0199\"\n}",
+              "raw": "{\n  \"phone\": \"555-0123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -326,49 +372,67 @@
           }
         },
         {
-          "name": "Deactivate customer",
+          "name": "Create customer - duplicate email",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"already in use\");",
+                  "});"
                 ]
               }
             }
           ],
           "request": {
-            "method": "DELETE",
-            "header": [],
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
-              "raw": "{{base_url}}/api/v1/customers/{{customer_id}}",
+              "raw": "{{base_url}}/api/v1/customers/",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "v1",
-                "customers",
-                "{{customer_id}}"
+                "customers"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Copy\",\n  \"last_name\": \"Cat\",\n  \"email\": \"{{test_email}}\",\n  \"phone\": \"555-0100\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
-        }
-      ]
-    },
-    {
-      "name": "Accounts",
-      "item": [
+        },
         {
-          "name": "List accounts",
+          "name": "Get customer - does not exist",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"not found\");",
+                  "});"
                 ]
               }
             }
@@ -376,6 +440,118 @@
           "request": {
             "method": "GET",
             "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customers/999999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create customer - missing fields",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 422 Unprocessable Entity\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test(\"FastAPI lists the missing fields\", function () {",
+                  "    const missing = pm.response.json().detail.map(e => e.loc[e.loc.length - 1]);",
+                  "    pm.expect(missing).to.include.members([\"last_name\", \"email\", \"phone\"]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customers/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"OnlyAName\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Accounts (CRUD)",
+      "description": "",
+      "item": [
+        {
+          "name": "Create account (opening balance 1000)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "const accountSchema = {",
+                  "    type: \"object\",",
+                  "    required: [\"id\", \"account_number\", \"customer_id\", \"balance\", \"branch_id\", \"is_active\"],",
+                  "    properties: {",
+                  "        id: { type: \"integer\" }, account_number: { type: \"string\", pattern: \"^ACC[0-9]+$\" },",
+                  "        customer_id: { type: \"integer\" }, balance: { type: \"number\" },",
+                  "        branch_id: { type: \"integer\" }, is_active: { type: \"boolean\" }",
+                  "    }",
+                  "};",
+                  "const account = pm.response.json();",
+                  "pm.test(\"Response matches the Account schema\", function () {",
+                  "    pm.response.to.have.jsonSchema(accountSchema);",
+                  "});",
+                  "pm.test(\"Opened with the right balance for the right customer\", function () {",
+                  "    pm.expect(account.balance).to.eql(1000);",
+                  "    pm.expect(account.customer_id).to.eql(Number(pm.environment.get(\"customer_id\")));",
+                  "});",
+                  "// Save it as {{account_id}} / {{account_number}} for the next requests",
+                  "pm.environment.set(\"account_id\", account.id);",
+                  "pm.environment.set(\"account_number\", account.account_number);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/api/v1/accounts/",
               "host": [
@@ -386,18 +562,127 @@
                 "v1",
                 "accounts"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": {{customer_id}},\n  \"first_name\": \"Postman\",\n  \"last_name\": \"Tester\",\n  \"balance\": 1000,\n  \"branch_id\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           }
         },
         {
-          "name": "List accounts for customer",
+          "name": "Create second account (balance 0)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.environment.set(\"second_account_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/accounts/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": {{customer_id}},\n  \"first_name\": \"Postman\",\n  \"last_name\": \"Tester\",\n  \"balance\": 0,\n  \"branch_id\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get account by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const accountSchema = {",
+                  "    type: \"object\",",
+                  "    required: [\"id\", \"account_number\", \"customer_id\", \"balance\", \"branch_id\", \"is_active\"],",
+                  "    properties: {",
+                  "        id: { type: \"integer\" }, account_number: { type: \"string\", pattern: \"^ACC[0-9]+$\" },",
+                  "        customer_id: { type: \"integer\" }, balance: { type: \"number\" },",
+                  "        branch_id: { type: \"integer\" }, is_active: { type: \"boolean\" }",
+                  "    }",
+                  "};",
+                  "pm.test(\"Response matches the Account schema\", function () {",
+                  "    pm.response.to.have.jsonSchema(accountSchema);",
+                  "});",
+                  "pm.test(\"Account number matches {{account_number}}\", function () {",
+                  "    pm.expect(pm.response.json().account_number).to.eql(pm.environment.get(\"account_number\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/accounts/{{account_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "{{account_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List accounts for this customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const list = pm.response.json();",
+                  "pm.test(\"Returns an array with both new accounts\", function () {",
+                  "    pm.expect(list).to.be.an(\"array\").with.lengthOf(2);",
+                  "    pm.expect(list.map(a => a.account_number)).to.include(pm.environment.get(\"account_number\"));",
+                  "});"
                 ]
               }
             }
@@ -425,14 +710,22 @@
           }
         },
         {
-          "name": "Get account",
+          "name": "List accounts - filter branch 1, min balance 1000",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Every result matches the filter\", function () {",
+                  "    pm.response.json().forEach(a => {",
+                  "        pm.expect(a.branch_id).to.eql(1);",
+                  "        pm.expect(a.balance).to.be.at.least(1000);",
+                  "    });",
+                  "});"
                 ]
               }
             }
@@ -441,28 +734,42 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/accounts/{{account_id}}",
+              "raw": "{{base_url}}/api/v1/accounts/?branch_id=1&min_balance=1000",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "v1",
-                "accounts",
-                "{{account_id}}"
+                "accounts"
+              ],
+              "query": [
+                {
+                  "key": "branch_id",
+                  "value": "1"
+                },
+                {
+                  "key": "min_balance",
+                  "value": "1000"
+                }
               ]
             }
           }
         },
         {
-          "name": "Create account",
+          "name": "Create account - negative balance",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"negative\");",
+                  "});"
                 ]
               }
             }
@@ -488,7 +795,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"customer_id\": {{customer_id}},\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"balance\": 500.0,\n  \"branch_id\": 1\n}",
+              "raw": "{\n  \"customer_id\": {{customer_id}},\n  \"first_name\": \"Postman\",\n  \"last_name\": \"Tester\",\n  \"balance\": -50,\n  \"branch_id\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -498,20 +805,25 @@
           }
         },
         {
-          "name": "Update account",
+          "name": "Create account - customer does not exist",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"does not exist\");",
+                  "});"
                 ]
               }
             }
           ],
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
@@ -519,20 +831,87 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/accounts/{{account_id}}",
+              "raw": "{{base_url}}/api/v1/accounts/",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "v1",
-                "accounts",
-                "{{account_id}}"
+                "accounts"
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"branch_id\": 2\n}",
+              "raw": "{\n  \"customer_id\": 999999,\n  \"first_name\": \"No\",\n  \"last_name\": \"One\",\n  \"balance\": 10,\n  \"branch_id\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Transfers",
+      "description": "",
+      "item": [
+        {
+          "name": "Transfer 250 between the two new accounts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "const transactionSchema = {",
+                  "    type: \"object\",",
+                  "    required: [\"id\", \"from_account_id\", \"to_account_id\", \"amount\", \"type\", \"timestamp\"],",
+                  "    properties: {",
+                  "        id: { type: \"integer\" }, from_account_id: { type: \"integer\" }, to_account_id: { type: \"integer\" },",
+                  "        amount: { type: \"number\" }, type: { enum: [\"TRANSFER\", \"DEPOSIT\", \"WITHDRAWAL\"] }, timestamp: { type: \"string\" }",
+                  "    }",
+                  "};",
+                  "const t = pm.response.json();",
+                  "pm.test(\"Response matches the Transaction schema\", function () {",
+                  "    pm.response.to.have.jsonSchema(transactionSchema);",
+                  "});",
+                  "pm.test(\"Recorded as a 250 TRANSFER\", function () {",
+                  "    pm.expect(t.type).to.eql(\"TRANSFER\");",
+                  "    pm.expect(t.amount).to.eql(250);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions/transfer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "transfer"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_account_id\": {{account_id}},\n  \"to_account_id\": {{second_account_id}},\n  \"amount\": 250\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -542,49 +921,19 @@
           }
         },
         {
-          "name": "Deactivate account",
+          "name": "Check sender balance is now 750",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/v1/accounts/{{account_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "accounts",
-                "{{account_id}}"
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Transactions",
-      "item": [
-        {
-          "name": "List transactions",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"1000 - 250 = 750\", function () {",
+                  "    pm.expect(pm.response.json().balance).to.eql(750);",
+                  "});"
                 ]
               }
             }
@@ -593,27 +942,68 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/v1/transactions/",
+              "raw": "{{base_url}}/api/v1/accounts/{{account_id}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "v1",
-                "transactions"
+                "accounts",
+                "{{account_id}}"
               ]
             }
           }
         },
         {
-          "name": "Transfer - success",
+          "name": "Check receiver balance is now 250",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"0 + 250 = 250\", function () {",
+                  "    pm.expect(pm.response.json().balance).to.eql(250);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/accounts/{{second_account_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "{{second_account_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Transfer - insufficient funds (overdraft)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"Insufficient funds\");",
+                  "});"
                 ]
               }
             }
@@ -640,51 +1030,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"from_account_id\": 1,\n  \"to_account_id\": 2,\n  \"amount\": 10.0\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          }
-        },
-        {
-          "name": "Transfer - insufficient funds",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/transactions/transfer",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transactions",
-                "transfer"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"from_account_id\": 1,\n  \"to_account_id\": 2,\n  \"amount\": 99999999.0\n}",
+              "raw": "{\n  \"from_account_id\": {{account_id}},\n  \"to_account_id\": {{second_account_id}},\n  \"amount\": 1000000\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -701,7 +1047,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"must be positive\");",
+                  "});"
                 ]
               }
             }
@@ -728,7 +1079,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"from_account_id\": 1,\n  \"to_account_id\": 2,\n  \"amount\": -50.0\n}",
+              "raw": "{\n  \"from_account_id\": {{account_id}},\n  \"to_account_id\": {{second_account_id}},\n  \"amount\": -100\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -736,11 +1087,185 @@
               }
             }
           }
+        },
+        {
+          "name": "Transfer - same account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"same account\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions/transfer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "transfer"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_account_id\": {{account_id}},\n  \"to_account_id\": {{account_id}},\n  \"amount\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Transfer - account does not exist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"not found\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions/transfer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "transfer"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_account_id\": {{account_id}},\n  \"to_account_id\": 999999,\n  \"amount\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Balance unchanged after failed transfers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Still 750 - failed transfers moved no money\", function () {",
+                  "    pm.expect(pm.response.json().balance).to.eql(750);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/accounts/{{account_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "{{account_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List TRANSFER transactions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Every result is a TRANSFER\", function () {",
+                  "    pm.response.json().forEach(t => pm.expect(t.type).to.eql(\"TRANSFER\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions/?type=TRANSFER",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "TRANSFER"
+                }
+              ]
+            }
+          }
         }
       ]
     },
     {
-      "name": "Branches",
+      "name": "5. Branches",
+      "description": "",
       "item": [
         {
           "name": "List branches",
@@ -750,7 +1275,13 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Returns the 3 seeded branches\", function () {",
+                  "    const names = pm.response.json().map(b => b.name);",
+                  "    pm.expect(names).to.include.members([\"Downtown Branch\", \"Uptown Branch\", \"Westside Branch\"]);",
+                  "});"
                 ]
               }
             }
@@ -772,14 +1303,21 @@
           }
         },
         {
-          "name": "Get branch",
+          "name": "Get branch 1",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Branch 1 is Downtown, New York\", function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b.name).to.eql(\"Downtown Branch\");",
+                  "    pm.expect(b.city).to.eql(\"New York\");",
+                  "});"
                 ]
               }
             }
@@ -800,11 +1338,44 @@
               ]
             }
           }
+        },
+        {
+          "name": "Get branch - does not exist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/branches/999999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "branches",
+                "999999"
+              ]
+            }
+          }
         }
       ]
     },
     {
-      "name": "Analytics",
+      "name": "6. Analytics (MongoDB aggregation)",
+      "description": "",
       "item": [
         {
           "name": "Monthly branch transfer volume",
@@ -814,7 +1385,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Each row has branch, year, month and totals\", function () {",
+                  "    const rows = pm.response.json();",
+                  "    pm.expect(rows).to.be.an(\"array\").that.is.not.empty;",
+                  "    rows.forEach(r => pm.expect(r).to.include.keys(\"branch_id\", \"year\", \"month\"));",
+                  "});"
                 ]
               }
             }
@@ -845,7 +1423,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  ""
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Returns a summary per branch\", function () {",
+                  "    const rows = pm.response.json();",
+                  "    pm.expect(rows).to.be.an(\"array\").that.is.not.empty;",
+                  "    rows.forEach(r => pm.expect(r).to.have.property(\"branch_id\"));",
+                  "});"
                 ]
               }
             }
@@ -864,6 +1449,205 @@
                 "analytics",
                 "branches",
                 "balances"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Delete (deactivate) and logout",
+      "description": "",
+      "item": [
+        {
+          "name": "Deactivate second account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Account is now inactive (soft delete)\", function () {",
+                  "    pm.expect(pm.response.json().is_active).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/accounts/{{second_account_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "{{second_account_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Transfer - to a deactivated account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"inactive\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions/transfer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "transfer"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_account_id\": {{account_id}},\n  \"to_account_id\": {{second_account_id}},\n  \"amount\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Deactivate customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Customer is now inactive\", function () {",
+                  "    pm.expect(pm.response.json().is_active).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customers/{{customer_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{customer_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204 No Content\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Me - after logout is rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
               ]
             }
           }
