@@ -1,48 +1,38 @@
 # repository/customer_repository.py
-# Data-access layer: owns the in-memory store and knows nothing about HTTP
-# or business rules. Returns/accepts Customer models; raises no domain errors.
+# Data-access layer for customers, stored in the MongoDB "customers" collection.
+# Knows nothing about HTTP or business rules. Returns/accepts Customer models.
 from typing import List, Optional
 
+from db import db
 from models.customer import Customer
+from repository.counters import next_id
 
 
 class CustomerRepository:
-    def __init__(self):
-        self._customers: List[Customer] = [
-            Customer(id=1, first_name="John", last_name="Doe",
-                     email="john.doe@example.com", phone="555-0100"),
-            Customer(id=2, first_name="Jane", last_name="Smith",
-                     email="jane.smith@example.com", phone="555-0101"),
-            Customer(id=3, first_name="Bob", last_name="Johnson",
-                     email="bob.johnson@example.com", phone="555-0102"),
-            Customer(id=4, first_name="Alice", last_name="Brown",
-                     email="alice.brown@example.com", phone="555-0103"),
-            Customer(id=5, first_name="Charlie", last_name="Wilson",
-                     email="charlie.wilson@example.com", phone="555-0104"),
-        ]
-        self._next_id = 6
+    def __init__(self, database=db):
+        self._db = database
+        self._customers = database["customers"]
 
     def list_all(self) -> List[Customer]:
-        return self._customers
+        return [Customer(**doc) for doc in self._customers.find({}, {"_id": 0}).sort("id", 1)]
 
     def get(self, customer_id: int) -> Optional[Customer]:
-        return next((c for c in self._customers if c.id == customer_id), None)
+        doc = self._customers.find_one({"id": customer_id}, {"_id": 0})
+        return Customer(**doc) if doc else None
 
     def find_by_email(self, email: str) -> Optional[Customer]:
-        return next((c for c in self._customers if c.email == email), None)
+        doc = self._customers.find_one({"email": email}, {"_id": 0})
+        return Customer(**doc) if doc else None
 
     def add(self, customer: Customer) -> Customer:
-        customer.id = self._next_id
-        self._next_id += 1
-        self._customers.append(customer)
+        customer.id = next_id("customers", self._db)
+        self._customers.insert_one(customer.model_dump())
         return customer
 
     def update(self, customer: Customer) -> Customer:
-        for i, existing in enumerate(self._customers):
-            if existing.id == customer.id:
-                self._customers[i] = customer
-                return customer
+        self._customers.update_one({"id": customer.id}, {"$set": customer.model_dump()})
         return customer
 
     def next_id(self) -> int:
-        return self._next_id
+        counter = self._db["counters"].find_one({"_id": "customers"})
+        return (counter["seq"] if counter else 0) + 1

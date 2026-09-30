@@ -36,4 +36,68 @@ bank.createCollection("sessions");
 bank.sessions.createIndex({ token: 1 }, { unique: true });
 bank.sessions.createIndex({ created_at: 1 }, { expireAfterSeconds: 86400 });
 
-print("banking database initialised: users =", bank.users.countDocuments(), ", sessions collection ready");
+// ---------- Branches ----------
+bank.createCollection("branches");
+bank.branches.createIndex({ id: 1 }, { unique: true });
+bank.branches.insertMany([
+  { id: 1, name: "Downtown Branch", city: "New York", is_active: true },
+  { id: 2, name: "Uptown Branch", city: "Boston", is_active: true },
+  { id: 3, name: "Westside Branch", city: "Chicago", is_active: true },
+]);
+
+// ---------- Customers ----------
+bank.createCollection("customers");
+bank.customers.createIndex({ id: 1 }, { unique: true });
+bank.customers.createIndex({ email: 1 }, { unique: true });
+bank.customers.insertMany([
+  { id: 1, first_name: "John", last_name: "Doe", email: "john.doe@example.com", phone: "555-0100", is_active: true },
+  { id: 2, first_name: "Jane", last_name: "Smith", email: "jane.smith@example.com", phone: "555-0101", is_active: true },
+  { id: 3, first_name: "Bob", last_name: "Johnson", email: "bob.johnson@example.com", phone: "555-0102", is_active: true },
+  { id: 4, first_name: "Alice", last_name: "Brown", email: "alice.brown@example.com", phone: "555-0103", is_active: true },
+  { id: 5, first_name: "Charlie", last_name: "Wilson", email: "charlie.wilson@example.com", phone: "555-0104", is_active: true },
+]);
+
+// ---------- Accounts ----------
+bank.createCollection("accounts");
+bank.accounts.createIndex({ id: 1 }, { unique: true });
+bank.accounts.createIndex({ account_number: 1 }, { unique: true });
+bank.accounts.createIndex({ branch_id: 1, balance: -1 }); // ?branch_id=&min_balance= filter
+bank.accounts.createIndex({ customer_id: 1 });
+bank.accounts.insertMany([
+  { id: 1, account_number: "ACC001", customer_id: 1, first_name: "John", last_name: "Doe", balance: 5000.0, branch_id: 1, is_active: true },
+  { id: 2, account_number: "ACC002", customer_id: 2, first_name: "Jane", last_name: "Smith", balance: 15000.0, branch_id: 1, is_active: true },
+  { id: 3, account_number: "ACC003", customer_id: 3, first_name: "Bob", last_name: "Johnson", balance: 7500.0, branch_id: 2, is_active: true },
+  { id: 4, account_number: "ACC004", customer_id: 4, first_name: "Alice", last_name: "Brown", balance: 20000.0, branch_id: 2, is_active: true },
+  { id: 5, account_number: "ACC005", customer_id: 5, first_name: "Charlie", last_name: "Wilson", balance: 3200.0, branch_id: 3, is_active: true },
+]);
+
+// ---------- Transactions ----------
+bank.createCollection("transactions");
+bank.transactions.createIndex({ id: 1 }, { unique: true });
+bank.transactions.createIndex({ timestamp: -1 }); // ?start_date= filter, newest first
+bank.transactions.createIndex({ type: 1 });
+bank.transactions.createIndex({ from_account_id: 1 });
+bank.transactions.createIndex({ to_account_id: 1 });
+bank.transactions.insertMany([
+  { id: 1, from_account_id: 1, to_account_id: 2, amount: 100.0, type: "TRANSFER", timestamp: new Date("2026-01-15T09:30:00Z") },
+  { id: 2, from_account_id: 3, to_account_id: 4, amount: 500.0, type: "TRANSFER", timestamp: new Date("2026-02-01T14:00:00Z") },
+]);
+
+// ---------- Counters ----------
+// Next id for each collection (like auto-increment in SQL). Starts at the last seeded id.
+bank.createCollection("counters");
+bank.counters.insertMany([
+  { _id: "branches", seq: 3 },
+  { _id: "customers", seq: 5 },
+  { _id: "accounts", seq: 5 },
+  { _id: "transactions", seq: 2 },
+]);
+
+print(
+  "banking database initialised:",
+  "users =", bank.users.countDocuments(),
+  ", customers =", bank.customers.countDocuments(),
+  ", accounts =", bank.accounts.countDocuments(),
+  ", branches =", bank.branches.countDocuments(),
+  ", transactions =", bank.transactions.countDocuments()
+);

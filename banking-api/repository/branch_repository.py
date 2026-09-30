@@ -1,35 +1,30 @@
 # repository/branch_repository.py
-# Data-access layer for branches: in-memory store. No HTTP, no business rules.
+# Data-access layer for branches, stored in the MongoDB "branches" collection.
+# No HTTP, no business rules.
 from typing import List, Optional
 
+from db import db
 from models.branch import Branch
+from repository.counters import next_id
 
 
 class BranchRepository:
-    def __init__(self):
-        # Seeded to match the branch_id values used by the seeded accounts.
-        self._branches: List[Branch] = [
-            Branch(id=1, name="Downtown Branch", city="New York"),
-            Branch(id=2, name="Uptown Branch", city="Boston"),
-            Branch(id=3, name="Westside Branch", city="Chicago"),
-        ]
-        self._next_id = 4
+    def __init__(self, database=db):
+        self._db = database
+        self._branches = database["branches"]
 
     def list_all(self) -> List[Branch]:
-        return self._branches
+        return [Branch(**doc) for doc in self._branches.find({}, {"_id": 0}).sort("id", 1)]
 
     def get(self, branch_id: int) -> Optional[Branch]:
-        return next((b for b in self._branches if b.id == branch_id), None)
+        doc = self._branches.find_one({"id": branch_id}, {"_id": 0})
+        return Branch(**doc) if doc else None
 
     def add(self, branch: Branch) -> Branch:
-        branch.id = self._next_id
-        self._next_id += 1
-        self._branches.append(branch)
+        branch.id = next_id("branches", self._db)
+        self._branches.insert_one(branch.model_dump())
         return branch
 
     def update(self, branch: Branch) -> Branch:
-        for i, existing in enumerate(self._branches):
-            if existing.id == branch.id:
-                self._branches[i] = branch
-                return branch
+        self._branches.update_one({"id": branch.id}, {"$set": branch.model_dump()})
         return branch
