@@ -28,14 +28,6 @@ bank.users.insertMany([
   },
 ]);
 
-// ---------- Login: sessions ----------
-// One document per signed-in browser: { token, user_id, created_at }.
-// Login creates one, logout deletes it. Sessions older than 1 day are removed
-// automatically by the TTL index.
-bank.createCollection("sessions");
-bank.sessions.createIndex({ token: 1 }, { unique: true });
-bank.sessions.createIndex({ created_at: 1 }, { expireAfterSeconds: 86400 });
-
 // ---------- Branches ----------
 bank.createCollection("branches");
 bank.branches.createIndex({ id: 1 }, { unique: true });

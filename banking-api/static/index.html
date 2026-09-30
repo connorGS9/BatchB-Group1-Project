@@ -221,10 +221,30 @@ let currentCustomers = [];
 let editingAccountId = null;
 let editingCustomerId = null;
 
+// ---------- Login token (Chapter 4 security) ----------
+// Every API call now needs an admin's login token (a JWT). The React app hands it
+// over in the link: http://localhost:8000/#token=...  We keep it for this tab only.
+const TOKEN_KEY = "admin_token";
+(function takeTokenFromLink() {
+  const m = location.hash.match(/token=([^&]+)/);
+  if (m) {
+    sessionStorage.setItem(TOKEN_KEY, decodeURIComponent(m[1]));
+    history.replaceState(null, "", location.pathname);   // hide the token from the address bar
+  }
+})();
+const getToken = () => sessionStorage.getItem(TOKEN_KEY);
+function goToLogin() {
+  sessionStorage.removeItem(TOKEN_KEY);
+  window.location.href = LOGIN_URL;
+}
+if (!getToken()) goToLogin();
+
 async function api(method, path, body) {
-  const opts = { method, headers: { "Content-Type": "application/json" } };
+  const opts = { method, headers: { "Content-Type": "application/json",
+                                    "Authorization": "Bearer " + getToken() } };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(API + path, opts);
+  if (res.status === 401) { goToLogin(); throw new Error("Please log in again"); }  // missing/expired token
   const data = res.status === 204 ? null : await res.json();
   if (!res.ok) throw new Error((data && data.detail) || ("HTTP " + res.status));
   return data;
@@ -435,7 +455,7 @@ el("clearAcctFilter").addEventListener("click", () => { el("fCustomer").value = 
 el("applyTxnFilter").addEventListener("click", loadTransactions);
 el("clearTxnFilter").addEventListener("click", () => { el("fStartDate").value = ""; el("fType").value = ""; loadTransactions(); });
 
-el("signOut").addEventListener("click", () => { window.location.href = LOGIN_URL; });
+el("signOut").addEventListener("click", goToLogin);
 
 checkHealth();
 refreshAll();

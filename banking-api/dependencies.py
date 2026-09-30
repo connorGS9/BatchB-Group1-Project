@@ -8,7 +8,6 @@ from repository.analytics_repository import AnalyticsRepository
 from repository.branch_repository import BranchRepository
 from repository.customer_repository import CustomerRepository
 from repository.transaction_repository import TransactionRepository
-from repository.session_repository import SessionRepository
 from repository.user_repository import UserRepository
 from services.account_service import AccountService
 from services.analytics_service import AnalyticsService
@@ -16,6 +15,7 @@ from services.auth_service import AuthService
 from services.branch_service import BranchService
 from services.customer_service import CustomerService
 from services.transaction_service import TransactionService
+from security import LoginRateLimiter
 
 # --- Customers (built first so accounts can validate customer_id against them) ---
 customer_repository = CustomerRepository()
@@ -35,8 +35,8 @@ branch_service = BranchService(branch_repository)
 
 # --- Login ---
 user_repository = UserRepository()
-session_repository = SessionRepository()
-auth_service = AuthService(user_repository, session_repository)
+login_limiter = LoginRateLimiter()   # 5 wrong passwords -> blocked for 5 minutes
+auth_service = AuthService(user_repository, login_limiter)
 
 # --- Reports (MongoDB aggregation pipelines) ---
 analytics_service = AnalyticsService(AnalyticsRepository())

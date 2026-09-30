@@ -1,9 +1,19 @@
 {
   "info": {
-    "_postman_id": "926f6e5c-17ea-4534-a7e4-1e3a57931580",
+    "_postman_id": "31e69bca-d029-4940-9a19-12a377d572cf",
     "name": "Bank System API Suite",
-    "description": "Automated API tests for the Group 1 banking API. Select the \"Bank System - Local\" environment, start the app with `docker compose up`, then Run the collection. It creates its own test customer and accounts, so John's demo data is not changed.",
+    "description": "Automated API tests for the Group 1 banking API. Select the \"Bank System - Local\" environment, start the app with `docker compose up`, paste your API_KEY from .env into the environment's api_key, then Run the collection. Requests use the admin JWT saved at login (collection Authorization tab); the Security folder checks 401/403/422 with John's customer token, a fake token, and the API key. It creates its own test customer and accounts, so John's demo data is not changed.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{admin_token}}",
+        "type": "string"
+      }
+    ]
   },
   "item": [
     {
@@ -42,17 +52,20 @@
               "path": [
                 "health"
               ]
+            },
+            "auth": {
+              "type": "noauth"
             }
           }
         }
       ]
     },
     {
-      "name": "1. Auth (login)",
+      "name": "1. Auth (login + JWT)",
       "description": "",
       "item": [
         {
-          "name": "Login - correct password",
+          "name": "Login as admin - save admin_token",
           "event": [
             {
               "listen": "test",
@@ -63,13 +76,21 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "const body = pm.response.json();",
-                  "pm.test(\"Returns a token and the user (without password hash)\", function () {",
-                  "    pm.expect(body.token).to.be.a(\"string\").and.not.empty;",
-                  "    pm.expect(body.user.username).to.eql(\"john\");",
+                  "pm.test(\"Returns a JWT and the user (without password hash)\", function () {",
+                  "    pm.expect(body.token.split(\".\")).to.have.lengthOf(3);   // a JWT has 3 parts",
+                  "    pm.expect(body.token_type).to.eql(\"bearer\");",
+                  "    pm.expect(body.user.role).to.eql(\"ADMIN\");",
                   "    pm.expect(body.user).to.not.have.property(\"password_hash\");",
                   "});",
-                  "// Save the token so the next requests can use {{token}}",
-                  "pm.environment.set(\"token\", body.token);"
+                  "pm.test(\"JWT holds the username, role and an expiry time\", function () {",
+                  "    // The middle part of a JWT is base64 JSON, readable by anyone (so no secrets in it!)",
+                  "    const claims = JSON.parse(atob(body.token.split(\".\")[1].replace(/-/g, \"+\").replace(/_/g, \"/\")));",
+                  "    pm.expect(claims.sub).to.eql(\"admin\");",
+                  "    pm.expect(claims.role).to.eql(\"ADMIN\");",
+                  "    pm.expect(claims.exp).to.be.above(claims.iat);",
+                  "});",
+                  "// Save it: every request in this collection sends {{admin_token}} (see the collection Authorization tab)",
+                  "pm.environment.set(\"admin_token\", body.token);"
                 ]
               }
             }
@@ -93,6 +114,64 @@
                 "auth",
                 "login"
               ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Login as john (customer) - save john_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test(\"John is a CUSTOMER\", function () {",
+                  "    pm.expect(body.user.role).to.eql(\"CUSTOMER\");",
+                  "    pm.expect(body.user.customer_id).to.eql(1);",
+                  "});",
+                  "pm.environment.set(\"john_token\", body.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
             },
             "body": {
               "mode": "raw",
@@ -143,9 +222,12 @@
                 "login"
               ]
             },
+            "auth": {
+              "type": "noauth"
+            },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"john\",\n  \"password\": \"wrong-password\"\n}",
+              "raw": "{\n  \"username\": \"nobody_{{$timestamp}}\",\n  \"password\": \"wrong-password\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -155,7 +237,7 @@
           }
         },
         {
-          "name": "Me - who is logged in",
+          "name": "Me - who is logged in (admin token)",
           "event": [
             {
               "listen": "test",
@@ -165,8 +247,8 @@
                   "pm.test(\"Status code is 200 OK\", function () {",
                   "    pm.response.to.have.status(200);",
                   "});",
-                  "pm.test(\"Token belongs to John\", function () {",
-                  "    pm.expect(pm.response.json().username).to.eql(\"john\");",
+                  "pm.test(\"Token belongs to admin\", function () {",
+                  "    pm.expect(pm.response.json().username).to.eql(\"admin\");",
                   "});"
                 ]
               }
@@ -174,12 +256,7 @@
           ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/auth/me",
               "host": [
@@ -197,7 +274,701 @@
       ]
     },
     {
-      "name": "2. Customers (CRUD)",
+      "name": "2. Security - 401 / 403 / 422 (Chapter 4)",
+      "description": "",
+      "item": [
+        {
+          "name": "No token - 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"Not logged in\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/accounts/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Fake token - 401",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Make up a token that the server never signed",
+                  "pm.variables.set(\"fake_token\", \"made-up-\" + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"Invalid login token\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/accounts/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{fake_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "John creates an account - 403 (admins only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403 Forbidden\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"Admins only\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/accounts/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{john_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"balance\": 1000000,\n  \"branch_id\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "John lists all customers - 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403 Forbidden\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customers/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{john_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "John reads Jane's customer record - 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403 Forbidden\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"your own\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customers/2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "2"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{john_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "John reads Jane's account - 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403 Forbidden\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"your own\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/accounts/2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "2"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{john_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "John sends money FROM Jane's account - 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403 Forbidden\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"your own account\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions/transfer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions",
+                "transfer"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{john_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_account_id\": 2,\n  \"to_account_id\": 1,\n  \"amount\": 500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "John lists accounts - only sees his own",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Only ACC001 comes back\", function () {",
+                  "    pm.expect(pm.response.json().map(a => a.account_number)).to.eql([\"ACC001\"]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/accounts/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{john_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "John's account directory - names but no balances",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Has account numbers, hides balances\", function () {",
+                  "    const first = pm.response.json()[0];",
+                  "    pm.expect(first).to.have.property(\"account_number\");",
+                  "    pm.expect(first).to.not.have.property(\"balance\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/accounts/directory",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "directory"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{john_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "John's transactions - only his own",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Every transaction touches account 1\", function () {",
+                  "    pm.response.json().forEach(t => pm.expect([t.from_account_id, t.to_account_id]).to.include(1));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transactions"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{john_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Report as John - 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 403 Forbidden\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/analytics/branches/balances",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "analytics",
+                "branches",
+                "balances"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{john_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Report with wrong API key - 401",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Make up an API key that is not the real one",
+                  "pm.variables.set(\"wrong_api_key\", \"guess-\" + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.json().detail).to.include(\"Invalid API key\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/analytics/branches/balances",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "analytics",
+                "branches",
+                "balances"
+              ]
+            },
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-API-Key",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{wrong_api_key}}",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Report with the API key - 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Report data came back using only the X-API-Key header\", function () {",
+                  "    pm.expect(pm.response.json()).to.be.an(\"array\").that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/analytics/branches/balances",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "analytics",
+                "branches",
+                "balances"
+              ]
+            },
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-API-Key",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{api_key}}",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create customer with bad email and blank name - 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 422 Unprocessable Entity\", function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test(\"Validation names the bad fields\", function () {",
+                  "    const fields = pm.response.json().detail.map(e => e.loc[e.loc.length - 1]);",
+                  "    pm.expect(fields).to.include.members([\"first_name\", \"email\"]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/customers/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"   \",\n  \"last_name\": \"Tester\",\n  \"email\": \"not-an-email\",\n  \"phone\": \"555-0199\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Customers (CRUD)",
       "description": "",
       "item": [
         {
@@ -506,7 +1277,7 @@
       ]
     },
     {
-      "name": "3. Accounts (CRUD)",
+      "name": "4. Accounts (CRUD)",
       "description": "",
       "item": [
         {
@@ -855,7 +1626,7 @@
       ]
     },
     {
-      "name": "4. Transfers",
+      "name": "5. Transfers",
       "description": "",
       "item": [
         {
@@ -1264,7 +2035,7 @@
       ]
     },
     {
-      "name": "5. Branches",
+      "name": "6. Branches",
       "description": "",
       "item": [
         {
@@ -1374,7 +2145,7 @@
       ]
     },
     {
-      "name": "6. Analytics (MongoDB aggregation)",
+      "name": "7. Analytics (MongoDB aggregation)",
       "description": "",
       "item": [
         {
@@ -1456,7 +2227,7 @@
       ]
     },
     {
-      "name": "7. Delete (deactivate) and logout",
+      "name": "8. Delete (deactivate) and logout",
       "description": "",
       "item": [
         {
@@ -1579,7 +2350,7 @@
           }
         },
         {
-          "name": "Logout",
+          "name": "Logout (john)",
           "event": [
             {
               "listen": "test",
@@ -1588,19 +2359,16 @@
                 "exec": [
                   "pm.test(\"Status code is 204 No Content\", function () {",
                   "    pm.response.to.have.status(204);",
-                  "});"
+                  "});",
+                  "// JWTs are not stored on the server: logging out = the app forgets the token.",
+                  "pm.environment.unset(\"john_token\");"
                 ]
               }
             }
           ],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/auth/logout",
               "host": [
@@ -1612,42 +2380,15 @@
                 "auth",
                 "logout"
               ]
-            }
-          }
-        },
-        {
-          "name": "Me - after logout is rejected",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status code is 401 Unauthorized\", function () {",
-                  "    pm.response.to.have.status(401);",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/v1/auth/me",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "me"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{john_token}}",
+                  "type": "string"
+                }
               ]
             }
           }
