@@ -10,6 +10,7 @@ services:
       - "127.0.0.1:27018:27017"   # host port 27018 → Mongo's 27017 inside the container   # only reachable from your own machine
     volumes:
       - mongo-data:/data/db # where the data is stored after container closure
+      - ./mongo-init:/docker-entrypoint-initdb.d:ro # runs init-db.js once, on the first start, to create the banking database
     healthcheck: # check if the database is running
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
       interval: 10s

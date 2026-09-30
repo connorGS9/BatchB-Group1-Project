@@ -1,34 +1,34 @@
 # repository/transaction_repository.py
-# Data-access layer for the transaction ledger: in-memory store plus the raw
-# date/type filtering. No HTTP, no business rules.
-from datetime import date, datetime
+# Data-access layer for the transaction ledger, stored in the MongoDB
+# "transactions" collection. Filters become a MongoDB query, e.g.
+#   ?start_date=2026-01-01&type=TRANSFER
+#   -> {"timestamp": {"$gte": 2026-01-01 00:00}, "type": "TRANSFER"}
+from datetime import date, datetime, time
 from typing import List, Optional
 
+from db import db
 from models.transaction import Transaction, TransactionType
+from repository.counters import next_id
 
 
 class TransactionRepository:
-    def __init__(self):
-        # A couple of historical entries so date/type filtering has data to show.
-        self._transactions: List[Transaction] = [
-            Transaction(id=1, from_account_id=1, to_account_id=2, amount=100.0,
-                        type=TransactionType.TRANSFER, timestamp=datetime(2026, 1, 15, 9, 30)),
-            Transaction(id=2, from_account_id=3, to_account_id=4, amount=500.0,
-                        type=TransactionType.TRANSFER, timestamp=datetime(2026, 2, 1, 14, 0)),
-        ]
-        self._next_id = 3
+    def __init__(self, database=db):
+        self._db = database
+        self._transactions = database["transactions"]
 
     def list_all(self, start_date: Optional[date] = None,
                  type: Optional[TransactionType] = None) -> List[Transaction]:
-        results = self._transactions
+        query = {}
         if start_date is not None:
-            results = [t for t in results if t.timestamp.date() >= start_date]
+            query["timestamp"] = {"$gte": datetime.combine(start_date, time.min)}
         if type is not None:
-            results = [t for t in results if t.type == type]
-        return results
+            query["type"] = type.value
+        docs = self._transactions.find(query, {"_id": 0}).sort("timestamp", 1)
+        return [Transaction(**doc) for doc in docs]
 
     def add(self, transaction: Transaction) -> Transaction:
-        transaction.id = self._next_id
-        self._next_id += 1
-        self._transactions.append(transaction)
+        transaction.id = next_id("transactions", self._db)
+        doc = transaction.model_dump()
+        doc["type"] = transaction.type.value  # store the enum as plain text
+        self._transactions.insert_one(doc)
         return transaction

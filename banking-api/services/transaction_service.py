@@ -29,7 +29,13 @@ class TransactionService:
 
         # Both must exist (raises NotFoundError) and be active with funds.
         source = self._accounts.get_account(data.from_account_id)
-        self._accounts.get_account(data.to_account_id)
+        target = self._accounts.get_account(data.to_account_id)
+        # Check BOTH accounts before any money moves, so a failed transfer
+        # can never take money out of the sender without paying the receiver.
+        if not source.is_active:
+            raise ValidationError(f"Account {data.from_account_id} is inactive")
+        if not target.is_active:
+            raise ValidationError(f"Account {data.to_account_id} is inactive")
         if source.balance < data.amount:
             raise ValidationError(
                 f"Insufficient funds in account {data.from_account_id}")
