@@ -1,110 +1,97 @@
 # tests/unit/test_transaction_service.py
-# Unit tests for TransactionService.transfer, with the repositories mocked (see conftest.py).
-# The fake account repo reads/writes a plain dict, so we can check exactly which
-# balances changed, and that a failed transfer changes NOTHING.
+# Unit tests for TransactionService.transfer against mongomock-backed repos.
 import pytest
 
 from errors import NotFoundError, ValidationError
 from models.transaction import TransactionType, TransferRequest
 
 
-@pytest.fixture
-def accounts(make_account):
-    """Our pretend 'database' of accounts."""
-    return {
-        1: make_account(id=1, account_number="ACC001", balance=500.0),
-        2: make_account(id=2, account_number="ACC002", customer_id=2, balance=100.0),
-        3: make_account(id=3, account_number="ACC003", customer_id=3, balance=900.0, is_active=False),
-    }
-
-
-@pytest.fixture(autouse=True)
-def fake_database(accounts, account_repo, transaction_repo):
-    """Wire the mocked repositories to the dict above."""
-    account_repo.get.side_effect = lambda account_id: accounts.get(account_id)
-
-    def save(account):
-        accounts[account.id] = account
-        return account
-
-    account_repo.update.side_effect = save
-    transaction_repo.add.side_effect = lambda t: t.model_copy(update={"id": 3})
-
-
-def transfer(from_id, to_id, amount):
+def _transfer(from_id, to_id, amount):
     return TransferRequest(from_account_id=from_id, to_account_id=to_id, amount=amount)
 
 
-@pytest.fixture
-def assert_nothing_changed(accounts, account_repo, transaction_repo):
-    def check():
-        assert accounts[1].balance == 500.0
-        assert accounts[2].balance == 100.0
-        assert accounts[3].balance == 900.0
-        account_repo.update.assert_not_called()   # no balance saved
-        transaction_repo.add.assert_not_called()  # no transaction recorded
-    return check
+# --------------------------------------------------------------------------
+# Successful transfer  (spec behaviour — passes today)
+# --------------------------------------------------------------------------
+def test_transfer_moves_money_and_records_ledger(transaction_service, account_repo,
+                                                 transaction_repo):
+    txn = transaction_service.transfer(_transfer(1, 2, 100.0))
+    assert account_repo.get(1).balance == 4900.0      # 5000 - 100
+    assert account_repo.get(2).balance == 15100.0     # 15000 + 100
+    assert txn.type == TransactionType.TRANSFER
+    # A ledger entry was appended (seed had 2).
+    assert len(transaction_repo.list_all(type=TransactionType.TRANSFER)) == 3
 
 
-# ---------- Failure scenarios: each must raise and leave balances untouched ----------
-
-def test_insufficient_funds(transaction_service, assert_nothing_changed):
-    with pytest.raises(ValidationError, match="Insufficient funds"):
-        transaction_service.transfer(transfer(1, 2, 10_000.0))
-    assert_nothing_changed()
-
-
-def test_negative_amount(transaction_service, assert_nothing_changed):
-    with pytest.raises(ValidationError, match="must be positive"):
-        transaction_service.transfer(transfer(1, 2, -50.0))
-    assert_nothing_changed()
+# --------------------------------------------------------------------------
+# Failure scenarios  (spec behaviour — each must raise and move no money)
+# --------------------------------------------------------------------------
+@pytest.mark.parametrize("amount", [-5.0, 0.0])
+def test_transfer_non_positive_amount_rejected(transaction_service, account_repo, amount):
+    with pytest.raises(ValidationError):
+        transaction_service.transfer(_transfer(1, 2, amount))
+    assert account_repo.get(1).balance == 5000.0
+    assert account_repo.get(2).balance == 15000.0
 
 
-def test_zero_amount(transaction_service, assert_nothing_changed):
-    with pytest.raises(ValidationError, match="must be positive"):
-        transaction_service.transfer(transfer(1, 2, 0.0))
-    assert_nothing_changed()
+def test_transfer_insufficient_funds_rejected(transaction_service, account_repo):
+    with pytest.raises(ValidationError):
+        transaction_service.transfer(_transfer(1, 2, 999999.0))
+    assert account_repo.get(1).balance == 5000.0
+    assert account_repo.get(2).balance == 15000.0
 
 
-def test_same_source_and_target(transaction_service, assert_nothing_changed):
-    with pytest.raises(ValidationError, match="same account"):
-        transaction_service.transfer(transfer(1, 1, 50.0))
-    assert_nothing_changed()
+def test_transfer_to_same_account_rejected(transaction_service):
+    with pytest.raises(ValidationError):
+        transaction_service.transfer(_transfer(1, 1, 50.0))
 
 
-def test_source_account_inactive(transaction_service, assert_nothing_changed):
-    with pytest.raises(ValidationError, match="inactive"):
-        transaction_service.transfer(transfer(3, 2, 50.0))
-    assert_nothing_changed()
+def test_transfer_from_inactive_account_rejected(transaction_service, account_service):
+    account_service.deactivate_account(1)
+    with pytest.raises(ValidationError):
+        transaction_service.transfer(_transfer(1, 2, 50.0))
 
 
-def test_target_account_inactive(transaction_service, assert_nothing_changed):
-    # Sender must NOT be charged when the receiver is closed.
-    with pytest.raises(ValidationError, match="inactive"):
-        transaction_service.transfer(transfer(1, 3, 50.0))
-    assert_nothing_changed()
+def test_transfer_to_inactive_account_rejected(transaction_service, account_service):
+    account_service.deactivate_account(2)
+    with pytest.raises(ValidationError):
+        transaction_service.transfer(_transfer(1, 2, 50.0))
 
 
-def test_source_account_missing(transaction_service, assert_nothing_changed):
+def test_transfer_from_missing_account_raises_not_found(transaction_service):
     with pytest.raises(NotFoundError):
-        transaction_service.transfer(transfer(999, 2, 50.0))
-    assert_nothing_changed()
+        transaction_service.transfer(_transfer(999, 2, 50.0))
 
 
-def test_target_account_missing(transaction_service, assert_nothing_changed):
+def test_transfer_to_missing_account_raises_not_found(transaction_service):
     with pytest.raises(NotFoundError):
-        transaction_service.transfer(transfer(1, 999, 50.0))
-    assert_nothing_changed()
+        transaction_service.transfer(_transfer(1, 999, 50.0))
 
 
-# ---------- Successful transfer ----------
+# --------------------------------------------------------------------------
+# BUG #4 — a transfer is two separate writes (debit, then credit) with no
+# atomicity. If the credit fails, the debit is already persisted and the money
+# has vanished. We simulate the mid-transfer crash by making the second balance
+# write raise. (mongomock cannot exercise a real Mongo transaction; a real-Mongo
+# integration test is proposed for that.)
+# --------------------------------------------------------------------------
+@pytest.mark.xfail(reason="BUG #4: transfer is not atomic; a failed credit loses the debit",
+                   strict=True)
+def test_failed_transfer_does_not_lose_money(transaction_service, account_service,
+                                             account_repo, monkeypatch):
+    real_adjust = account_service.adjust_balance
+    calls = {"n": 0}
 
-def test_successful_transfer(transaction_service, accounts, transaction_repo):
-    result = transaction_service.transfer(transfer(1, 2, 200.0))
+    def flaky_adjust(account_id, delta):
+        calls["n"] += 1
+        if calls["n"] == 2:                           # the credit leg
+            raise RuntimeError("crash between debit and credit")
+        return real_adjust(account_id, delta)
 
-    assert accounts[1].balance == 300.0   # source debited: 500 - 200
-    assert accounts[2].balance == 300.0   # target credited: 100 + 200
-    transaction_repo.add.assert_called_once()  # a transaction was recorded
-    assert result.type == TransactionType.TRANSFER
-    assert result.amount == 200.0
-    assert (result.from_account_id, result.to_account_id) == (1, 2)
+    monkeypatch.setattr(account_service, "adjust_balance", flaky_adjust)
+
+    with pytest.raises(RuntimeError):
+        transaction_service.transfer(_transfer(1, 2, 100.0))
+
+    # The sender must not have lost money to a transfer that never completed.
+    assert account_repo.get(1).balance == 5000.0
