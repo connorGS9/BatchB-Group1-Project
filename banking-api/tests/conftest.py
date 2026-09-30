@@ -15,6 +15,9 @@ from datetime import datetime, timezone
 # db.py reads MONGO_URL at import time; a dummy is fine since we never connect.
 os.environ.setdefault("MONGO_URL", "mongodb://unused-in-tests:27017")
 os.environ.setdefault("MONGO_DB", "banking")
+# config.py requires these secrets; tests use fixed fake values.
+os.environ.setdefault("JWT_SECRET", "test-secret-only-for-unit-tests-0123456789")
+os.environ.setdefault("API_KEY", "test-api-key")
 
 import mongomock
 import pytest
@@ -149,6 +152,37 @@ def client(fake_db):
     from main import app
     with TestClient(app) as test_client:
         yield test_client
+
+
+# --- Login tokens for API tests (Chapter 4 security) -----------------------
+
+@pytest.fixture(autouse=True)
+def _reset_login_limiter():
+    """Wrong-password counts must not leak from one test into the next."""
+    import dependencies
+    dependencies.login_limiter.reset()
+    yield
+    dependencies.login_limiter.reset()
+
+
+def _auth_header(user) -> dict:
+    from security import create_access_token
+    return {"Authorization": f"Bearer {create_access_token(user)}"}
+
+
+@pytest.fixture
+def admin_headers():
+    from models.user import UserPublic
+    return _auth_header(UserPublic(id=2, username="admin", full_name="Bank Admin",
+                                   role="ADMIN", customer_id=None))
+
+
+@pytest.fixture
+def john_headers():
+    """John is a CUSTOMER who owns customer #1 and account #1 (ACC001)."""
+    from models.user import UserPublic
+    return _auth_header(UserPublic(id=1, username="john", full_name="John Doe",
+                                   role="CUSTOMER", customer_id=1))
 
 
 # --- Small helper kept from the original scaffold -------------------------

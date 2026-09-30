@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getAllAccounts, getCustomer, getMyAccounts, getMyTransactions } from '../api/authService.js'
+import { getAllAccounts, getCustomer, getMyAccounts, getMyTransactions, getToken } from '../api/authService.js'
 import Accounts from '../components/Accounts.jsx'
 import SendMoney from '../components/SendMoney.jsx'
 import Settings from '../components/Settings.jsx'
@@ -61,7 +61,11 @@ export default function Home({ user, onLogout }) {
         {isAdmin && (
           <>
             <p>You're signed in as <strong>{user.username}</strong>.</p>
-            <a className="primary-link" href={DASHBOARD_URL}>Open the admin dashboard</a>
+            {/* The dashboard is on another port, so hand it the login token after the "#"
+                (the part after # is never sent to any server). */}
+            <a className="primary-link" href={`${DASHBOARD_URL}#token=${encodeURIComponent(getToken() || '')}`}>
+              Open the admin dashboard
+            </a>
           </>
         )}
 

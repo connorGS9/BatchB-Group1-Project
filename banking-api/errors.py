@@ -13,3 +13,11 @@ class ValidationError(Exception):
 
 class AuthError(Exception):
     """Raised when login fails or a request has no valid login token (-> 401)."""
+
+
+class ForbiddenError(Exception):
+    """Raised when you ARE logged in but not allowed to do this (-> 403)."""
+
+
+class RateLimitError(Exception):
+    """Raised after too many wrong passwords (-> 429 Too Many Requests)."""

@@ -1,16 +1,15 @@
 # services/auth_service.py
-# Login logic: check the password, hand out a session token, and look up who a
-# token belongs to. Users and sessions are stored in MongoDB, so logins survive
-# a server restart. (Chapter 5 replaces these tokens with JWTs.)
+# Login logic: check the password, then hand out a JWT (see security.py).
+# A JWT is "stateless": the server doesn't store it. It checks the signature and
+# the expiry time on every request instead, so there's no sessions collection.
 import hashlib
 import hmac
-import secrets
 from typing import Optional
 
 from errors import AuthError
 from models.user import User, UserPublic
-from repository.session_repository import SessionRepository
 from repository.user_repository import UserRepository
+from security import LoginRateLimiter, create_access_token, decode_access_token
 
 
 def hash_password(password: str, salt_hex: str) -> str:
@@ -22,29 +21,26 @@ def to_public(user: User) -> UserPublic:
 
 
 class AuthService:
-    def __init__(self, repository: UserRepository = None, sessions: SessionRepository = None):
+    def __init__(self, repository: UserRepository = None, limiter: LoginRateLimiter = None):
         self._repo = repository or UserRepository()
-        self._sessions = sessions or SessionRepository()
+        self._limiter = limiter or LoginRateLimiter()
 
     def login(self, username: str, password: str) -> dict:
-        user = self._repo.find_by_username(username.strip().lower())
+        username = username.strip().lower()
+        self._limiter.check(username)            # too many wrong passwords -> 429
+        user = self._repo.find_by_username(username)
         # Same message for "no such user" and "wrong password" so nobody can
         # use the login form to find out which usernames exist.
         if user is None or not hmac.compare_digest(
             hash_password(password, user.salt), user.password_hash
         ):
+            self._limiter.record_failure(username)
             raise AuthError("Incorrect username or password")
-        token = secrets.token_urlsafe(32)
-        self._sessions.create(token, user.id)
-        return {"token": token, "user": to_public(user)}
+        self._limiter.reset(username)
+        public = to_public(user)
+        return {"token": create_access_token(public), "token_type": "bearer", "user": public}
 
     def current_user(self, token: Optional[str]) -> UserPublic:
-        user_id = self._sessions.get_user_id(token) if token else None
-        user = self._repo.get(user_id) if user_id else None
-        if user is None:
-            raise AuthError("You're not logged in, or your session expired")
-        return to_public(user)
-
-    def logout(self, token: Optional[str]) -> None:
-        if token:
-            self._sessions.delete(token)
+        if not token:
+            raise AuthError("You're not logged in")
+        return decode_access_token(token)

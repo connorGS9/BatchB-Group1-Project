@@ -80,15 +80,16 @@ export async function updateCustomer(customerId, changes) {
   })
 }
 
-// Every account (used to show "ACC002 · Jane Smith" instead of a bare id)
+// Every account's number + name, WITHOUT balances (used to show "ACC002 · Jane Smith").
+// Customers aren't allowed to list other people's full accounts any more.
 export async function getAllAccounts() {
-  return request('/accounts/')
+  return request('/accounts/directory')
 }
 
 // Find an account by its number (e.g. "ACC002") so people can send money
 // using the number printed on the account, not the internal id
 export async function findAccountByNumber(accountNumber) {
-  const accounts = await request('/accounts/')
+  const accounts = await request('/accounts/directory')
   const wanted = accountNumber.trim().toUpperCase()
   return accounts.find((a) => a.account_number.toUpperCase() === wanted) || null
 }

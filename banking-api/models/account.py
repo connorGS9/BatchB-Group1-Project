@@ -64,3 +64,13 @@ class Account(BaseModel):
                 "is_active": True,
             }
         }
+
+
+class AccountPublic(BaseModel):
+    """What any logged-in customer may see about ANOTHER account: enough to send
+    money to it, but not its balance or owner id."""
+    id: int
+    account_number: str
+    first_name: str
+    last_name: str
+    is_active: bool = True

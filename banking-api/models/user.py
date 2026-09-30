@@ -38,7 +38,8 @@ class LoginRequest(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    """Returned after a successful login. The frontend keeps the token and sends it
-    back as `Authorization: Bearer <token>`."""
+    """Returned after a successful login. The frontend keeps the token (a JWT) and
+    sends it back as `Authorization: Bearer <token>`."""
     token: str
+    token_type: str = "bearer"
     user: UserPublic
