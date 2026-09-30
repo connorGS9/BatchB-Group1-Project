@@ -7,6 +7,7 @@ from repository.account_repository import AccountRepository
 from repository.branch_repository import BranchRepository
 from repository.customer_repository import CustomerRepository
 from repository.transaction_repository import TransactionRepository
+from repository.session_repository import SessionRepository
 from repository.user_repository import UserRepository
 from services.account_service import AccountService
 from services.auth_service import AuthService
@@ -32,4 +33,5 @@ branch_service = BranchService(branch_repository)
 
 # --- Login ---
 user_repository = UserRepository()
-auth_service = AuthService(user_repository)
+session_repository = SessionRepository()
+auth_service = AuthService(user_repository, session_repository)
