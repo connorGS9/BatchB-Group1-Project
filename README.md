@@ -29,6 +29,7 @@ A full-stack banking system built with **Python (FastAPI)**, **React** and **Nod
 | Frontend | React, Node       |
 | Database | MongoDB           |
 | Runtime  | Docker Compose    |
+| Testing  | pyTest, Postman   |
 
 ---
 
