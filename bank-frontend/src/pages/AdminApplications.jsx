@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import {
-  approveApplication, declineApplication, getApplications, getToken,
-} from '../api/authService.js'
-import { useAuth } from '../auth.jsx'
+import { approveApplication, declineApplication, getApplications } from '../api/authService.js'
 import { money } from '../components/format.js'
-
-// The admin dashboard (accounts/customers/transactions) still lives on the API
-// origin; this page links to it and hands over the login token after the "#".
-const DASHBOARD_URL = 'http://localhost:8000/'
 
 function fmtDate(value) {
   if (!value) return '—'
@@ -17,7 +10,6 @@ function fmtDate(value) {
 }
 
 export default function AdminApplications() {
-  const { logout } = useAuth()
   const [apps, setApps] = useState([])
   const [tab, setTab] = useState('review')
   const [error, setError] = useState('')
@@ -70,25 +62,11 @@ export default function AdminApplications() {
     }
   }
 
-  function openDashboard() {
-    window.location.href = `${DASHBOARD_URL}#token=${encodeURIComponent(getToken() || '')}`
-  }
-
   return (
-    <div className="home-page">
-      <header className="topbar">
-        <span className="brand-small">Three Musketeers United · Admin</span>
-        <div className="topbar-actions">
-          <button type="button" className="secondary" onClick={openDashboard}>Open full dashboard</button>
-          <button type="button" className="secondary" onClick={logout}>Sign out</button>
-        </div>
-      </header>
+    <>
+      <h1>Account applications</h1>
 
-      <main className="home-card">
-        <p className="eyebrow">Administrator</p>
-        <h1>Account applications</h1>
-
-        <nav className="tabs" aria-label="Applications views">
+      <nav className="tabs" aria-label="Applications views">
           <button type="button" className={tab === 'review' ? 'tab active' : 'tab'} onClick={() => setTab('review')}>
             To review ({pending.length})
           </button>
@@ -189,7 +167,6 @@ export default function AdminApplications() {
             })}
           </ul>
         )}
-      </main>
-    </div>
+    </>
   )
 }

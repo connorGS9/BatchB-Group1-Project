@@ -1,8 +1,5 @@
-from pathlib import Path
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 import uvicorn
 
 from controllers.account_controller import router as account_router
@@ -33,13 +30,10 @@ app.include_router(auth_router)
 app.include_router(analytics_router)
 app.include_router(application_router)
 
-STATIC_DIR = Path(__file__).parent / "static"
-
-
 @app.get("/", include_in_schema=False)
-def dashboard():
-    """Serve the live dashboard UI (same origin as the API, so no CORS)."""
-    return FileResponse(STATIC_DIR / "index.html")
+def root():
+    """API-only origin. The UI is the React app, served separately (nginx/Vite)."""
+    return {"service": "Banking API", "docs": "/docs", "health": "/health"}
 
 
 @app.get("/health")

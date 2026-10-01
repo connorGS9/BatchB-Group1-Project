@@ -144,6 +144,54 @@ export async function declineApplication(id, note) {
   })
 }
 
+// ---------- Admin data (accounts / customers / transactions). Admin only. ----------
+
+function qs(params = {}) {
+  const pairs = Object.entries(params).filter(([, v]) => v !== '' && v != null)
+  const s = new URLSearchParams(pairs).toString()
+  return s ? `?${s}` : ''
+}
+
+// Full account list with balances (admin view), optionally filtered by
+// customer_id / branch_id / min_balance.
+export async function getAccounts(params) {
+  return request(`/accounts/${qs(params)}`)
+}
+
+export async function getCustomers() {
+  return request('/customers/')
+}
+
+// Transaction ledger, optionally filtered by start_date / type.
+export async function getTransactions(params) {
+  return request(`/transactions/${qs(params)}`)
+}
+
+// Branches (admin). Public callers use getPublicBranches instead.
+export async function getBranches() {
+  return request('/branches/')
+}
+
+// Accounts — create/edit/deactivate (admin).
+export async function createAccount(data) {
+  return request('/accounts/', { method: 'POST', body: JSON.stringify(data) })
+}
+export async function updateAccount(id, changes) {
+  return request(`/accounts/${id}`, { method: 'PUT', body: JSON.stringify(changes) })
+}
+export async function deactivateAccount(id) {
+  return request(`/accounts/${id}`, { method: 'DELETE' })
+}
+
+// Customers — create/deactivate (admin). updateCustomer already exists above
+// (shared with the customer Settings page).
+export async function createCustomer(data) {
+  return request('/customers/', { method: 'POST', body: JSON.stringify(data) })
+}
+export async function deactivateCustomer(id) {
+  return request(`/customers/${id}`, { method: 'DELETE' })
+}
+
 // Transactions that touch any of these accounts, newest first
 export async function getMyTransactions(accountIds) {
   const all = await request('/transactions/')

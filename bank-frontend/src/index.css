@@ -336,3 +336,56 @@ button.danger-btn:hover:not(:disabled) { background: #8f1c14; }
 .tag { font-size: 0.72rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; }
 .tag-ok { background: #e7f4ef; color: var(--brand); }
 .tag-no { background: var(--error-bg); color: var(--error); }
+
+/* ---------- Admin shell (/admin/*) ---------- */
+.admin-brand { display: inline-flex; align-items: center; gap: 10px; }
+.brand-chip {
+  width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+  background: var(--brand); color: var(--brand-text);
+}
+.brand-chip svg { width: 17px; height: 17px; }
+
+.health { display: inline-flex; align-items: center; gap: 7px; font-size: 0.85rem; color: var(--muted); }
+.health-dot { width: 9px; height: 9px; border-radius: 999px; background: var(--muted); }
+.health-dot.ok { background: var(--brand); }
+.health-dot.bad { background: var(--error); }
+
+.admin-nav {
+  display: flex; gap: 4px; flex-wrap: wrap; padding: 0 24px;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.admin-tab {
+  padding: 12px 14px; font-weight: 600; color: var(--muted); text-decoration: none;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.admin-tab:hover { color: var(--text); }
+.admin-tab.active { color: var(--brand); border-bottom-color: var(--brand); }
+
+.admin-main { max-width: 1000px; }
+.admin-tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 20px; }
+.stat-value.alert { color: var(--error); }
+.overview-cta { margin-top: 18px; }
+.overview-cta a { color: var(--brand); font-weight: 600; }
+
+/* ---------- Admin tables + forms (accounts/customers/transactions) ---------- */
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 4px; }
+.admin-table th, .admin-table td { text-align: left; padding: 10px; border-bottom: 1px solid var(--line); }
+.admin-table th { color: var(--muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.admin-table td.num, .admin-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.admin-table tbody tr:hover { background: var(--bg); }
+.admin-empty { color: var(--muted); font-style: italic; padding: 14px 10px; }
+
+.row-actions { display: flex; gap: 6px; justify-content: flex-end; white-space: nowrap; }
+.btn-sm { font: inherit; font-weight: 600; font-size: 0.8rem; padding: 5px 10px; border-radius: 7px; cursor: pointer; background: transparent; }
+.btn-edit { border: 1px solid var(--brand); color: var(--brand); }
+.btn-edit:hover { background: #e7f4ef; }
+.btn-danger { border: 1px solid var(--error); color: var(--error); }
+.btn-danger:hover { background: var(--error-bg); }
+
+.admin-form, .admin-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.admin-toolbar { margin: 4px 0 16px; }
+.admin-form { margin-bottom: 8px; }
+.fld { display: flex; flex-direction: column; gap: 4px; }
+.fld label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; margin: 0; }
+.admin-form input, .admin-form select, .admin-toolbar input, .admin-toolbar select { margin-bottom: 0; width: auto; min-width: 150px; }
+.admin-form input:disabled { background: var(--bg); color: var(--muted); }

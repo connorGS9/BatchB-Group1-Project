@@ -10,17 +10,6 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // The legacy :8000 dashboard signs out via …/adminlogin?logout=1. Honor it
-    // while that page still exists, then strip the flag from the URL.
-    const params = new URLSearchParams(window.location.search)
-    if (params.has('logout')) {
-      apiLogout().finally(() => {
-        window.history.replaceState({}, '', window.location.pathname)
-        setUser(null)
-        setLoading(false)
-      })
-      return
-    }
     getCurrentUser().then((u) => {
       setUser(u)
       setLoading(false)

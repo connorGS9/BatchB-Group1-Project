@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getAllAccounts, getCustomer, getMyAccounts, getMyTransactions, getToken } from '../api/authService.js'
+import { getAllAccounts, getCustomer, getMyAccounts, getMyTransactions } from '../api/authService.js'
 import { useAuth } from '../auth.jsx'
 import Accounts from '../components/Accounts.jsx'
 import Dashboard from '../components/Dashboard.jsx'
 import SendMoney from '../components/SendMoney.jsx'
 import Settings from '../components/Settings.jsx'
 
-const DASHBOARD_URL = 'http://localhost:8000/'
 const TABS = [
   { id: 'accounts', label: 'Accounts' },
   { id: 'send', label: 'Send money' },
@@ -15,7 +14,6 @@ const TABS = [
 
 export default function Home() {
   const { user, logout } = useAuth()
-  const isAdmin = user.role === 'ADMIN'
   const [tab, setTab] = useState('accounts')
   const [customer, setCustomer] = useState(null)
   const [accounts, setAccounts] = useState([])
@@ -58,23 +56,12 @@ export default function Home() {
       </header>
 
       <main className="home-card">
-        <p className="eyebrow">{isAdmin ? 'Administrator' : 'Customer'}</p>
-        <h1>Hi, {isAdmin ? 'Admin' : firstName}</h1>
-
-        {isAdmin && (
-          <>
-            <p>You're signed in as <strong>{user.username}</strong>.</p>
-            {/* The dashboard is on another port, so hand it the login token after the "#"
-                (the part after # is never sent to any server). */}
-            <a className="primary-link" href={`${DASHBOARD_URL}#token=${encodeURIComponent(getToken() || '')}`}>
-              Open the admin dashboard
-            </a>
-          </>
-        )}
+        <p className="eyebrow">Customer</p>
+        <h1>Hi, {firstName}</h1>
 
         {error && <p className="error" role="alert">{error}</p>}
 
-        {!isAdmin && customer && (
+        {customer && (
           <>
             <Dashboard
               accounts={accounts}
