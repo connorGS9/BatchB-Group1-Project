@@ -74,8 +74,10 @@ def test_stale_update_must_not_clobber_newer_balance(account_repo):
 # BUG #9 — CustomerRepository.next_id() reads seq and adds 1 without $inc, so it
 # is not atomic and hands out the SAME id twice. It is also unused (add() uses
 # the atomic counters.next_id instead).
+# FIXED #9: next_id() did a read-then-add-1 (two steps), so back-to-back calls
+# both returned 6. It now delegates to the shared atomic counter (a single $inc),
+# so each call returns a new id. Changed CustomerRepository.next_id in
+# repository/customer_repository.py.
 # --------------------------------------------------------------------------
-@pytest.mark.xfail(reason="BUG #9: customer_repository.next_id() is non-atomic and returns duplicates",
-                   strict=True)
 def test_customer_repo_next_id_is_unique(customer_repo):
     assert customer_repo.next_id() != customer_repo.next_id()
