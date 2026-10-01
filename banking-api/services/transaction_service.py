@@ -21,11 +21,7 @@ class TransactionService:
                           type: Optional[TransactionType] = None,
                           account_ids: Optional[List[int]] = None) -> List[Transaction]:
         """account_ids: only transactions touching these accounts (a customer's own)."""
-        transactions = self._repo.list_all(start_date=start_date, type=type)
-        if account_ids is not None:
-            transactions = [t for t in transactions
-                            if t.from_account_id in account_ids or t.to_account_id in account_ids]
-        return transactions
+        return self._repo.list_all(start_date=start_date, type=type, account_ids=account_ids)
 
     def transfer(self, data: TransferRequest,
                  acting_customer_id: Optional[int] = None) -> Transaction:

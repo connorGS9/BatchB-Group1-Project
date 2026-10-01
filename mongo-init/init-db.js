@@ -68,8 +68,10 @@ bank.createCollection("transactions");
 bank.transactions.createIndex({ id: 1 }, { unique: true });
 bank.transactions.createIndex({ timestamp: -1 }); // ?start_date= filter, newest first
 bank.transactions.createIndex({ type: 1 });
-bank.transactions.createIndex({ from_account_id: 1 });
-bank.transactions.createIndex({ to_account_id: 1 });
+// A customer's history = $or on from/to account, newest first. Compound with
+// timestamp so the date filter and sort are served by the index too.
+bank.transactions.createIndex({ from_account_id: 1, timestamp: -1 });
+bank.transactions.createIndex({ to_account_id: 1, timestamp: -1 });
 bank.transactions.insertMany([
   { id: 1, from_account_id: 1, to_account_id: 2, amount: 100.0, type: "TRANSFER", timestamp: new Date("2026-01-15T09:30:00Z") },
   { id: 2, from_account_id: 3, to_account_id: 4, amount: 500.0, type: "TRANSFER", timestamp: new Date("2026-02-01T14:00:00Z") },

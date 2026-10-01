@@ -1,8 +1,10 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from pymongo.errors import PyMongoError
 import uvicorn
 
 from controllers.account_controller import router as account_router
@@ -12,9 +14,19 @@ from controllers.branch_controller import router as branch_router
 from controllers.customer_controller import router as customer_router
 from controllers.transaction_controller import router as transaction_router
 from config import HOST, PORT
-from db import client
+from db import client, ensure_indexes
 
-app = FastAPI(title="Banking API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        ensure_indexes()
+    except PyMongoError as e:  # don't block startup; /health will report Mongo problems
+        print(f"Warning: could not create indexes: {e}")
+    yield
+
+
+app = FastAPI(title="Banking API", lifespan=lifespan)
 
 # Let the React frontend (bank-frontend, runs on port 5173) call this API
 app.add_middleware(

@@ -46,6 +46,22 @@ def test_transactions_filter_by_type(transaction_repo):
     assert [t.id for t in result] == [1, 2]
 
 
+def test_transactions_filter_by_account_matches_either_side(transaction_repo):
+    # Seed: #1 is 1 -> 2, #2 is 3 -> 4. Account 2 only receives; account 3 only sends.
+    assert [t.id for t in transaction_repo.list_all(account_ids=[2])] == [1]
+    assert [t.id for t in transaction_repo.list_all(account_ids=[3])] == [2]
+    assert [t.id for t in transaction_repo.list_all(account_ids=[1, 4])] == [1, 2]
+
+
+def test_transactions_filter_by_account_combines_with_date(transaction_repo):
+    assert transaction_repo.list_all(account_ids=[1], start_date=date(2026, 1, 20)) == []
+
+
+def test_transactions_filter_by_account_empty_list_returns_nothing(transaction_repo):
+    # A customer with no accounts must see nothing, not the whole ledger.
+    assert transaction_repo.list_all(account_ids=[]) == []
+
+
 # --------------------------------------------------------------------------
 # Counter  (spec behaviour — the atomic one used in production)
 # --------------------------------------------------------------------------
