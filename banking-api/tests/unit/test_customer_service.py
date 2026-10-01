@@ -30,9 +30,11 @@ def test_update_customer_to_existing_email_rejected(customer_service):
 # --------------------------------------------------------------------------
 # BUG #7 — accounts copy the customer's first/last name, so renaming a customer
 # leaves their account name stale.
+# FIXED #7: update_customer() now copies any name change onto the customer's
+# accounts, so their stored names stay in sync. Changed CustomerService (it now
+# takes an account repository) in services/customer_service.py; wired in
+# dependencies.py.
 # --------------------------------------------------------------------------
-@pytest.mark.xfail(reason="BUG #7: renaming a customer leaves the account name stale",
-                   strict=True)
 def test_customer_rename_propagates_to_account(customer_service, account_repo):
     customer_service.update_customer(1, CustomerUpdate(first_name="Jonathan"))
     # Account #1 belongs to customer #1; its name should reflect the rename.
