@@ -210,7 +210,7 @@ const API = "/api/v1";
 // flag tells it to clear the session and show the login screen. We target
 // "localhost" explicitly (not 127.0.0.1): Vite binds to localhost/IPv6 only, and
 // the login token lives under the localhost origin.
-const LOGIN_URL = "http://localhost:5173/?logout=1";
+const LOGIN_URL = "http://localhost:5173/adminlogin?logout=1";   // admins sign in on their own page
 const fmt = n => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 const el = id => document.getElementById(id);
 
