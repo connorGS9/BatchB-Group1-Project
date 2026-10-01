@@ -29,7 +29,9 @@ async function request(path, options = {}) {
   if (!res.ok) {
     // FastAPI puts the message in "detail" (a string, or a list for validation errors)
     const detail = Array.isArray(data.detail) ? data.detail[0]?.msg : data.detail
-    throw new Error(detail || `Request failed (${res.status})`)
+    const err = new Error(detail || `Request failed (${res.status})`)
+    err.status = res.status // lets callers tell e.g. 409 "already pending" from a real error
+    throw err
   }
   return data
 }
@@ -99,6 +101,46 @@ export async function sendMoney(fromAccountId, toAccountId, amount) {
   return request('/transactions/transfer', {
     method: 'POST',
     body: JSON.stringify({ from_account_id: fromAccountId, to_account_id: toAccountId, amount }),
+  })
+}
+
+// ---------- Account applications (public: no login needed) ----------
+
+// Active branches for the application form's dropdown
+export async function getPublicBranches() {
+  return request('/applications/branches')
+}
+
+// Submit a request to open an account. The backend holds it as PENDING until an
+// admin approves or declines it. Throws Error(message) on 400/409/429 etc.
+export async function submitApplication(payload) {
+  return request('/applications/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+// ---------- Account applications (admin: needs an admin login token) ----------
+
+// All applications, or just one status (e.g. 'PENDING'). Admin only.
+export async function getApplications(status) {
+  const query = status ? `?status=${encodeURIComponent(status)}` : ''
+  return request(`/applications/${query}`)
+}
+
+// Approve an application -> provisions customer + account + login. Admin only.
+export async function approveApplication(id, openingBalance) {
+  return request(`/applications/${id}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ opening_balance: openingBalance }),
+  })
+}
+
+// Decline an application, with an optional reason kept on the record. Admin only.
+export async function declineApplication(id, note) {
+  return request(`/applications/${id}/decline`, {
+    method: 'POST',
+    body: JSON.stringify({ note }),
   })
 }
 

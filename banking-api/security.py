@@ -117,7 +117,42 @@ def require_admin_or_api_key(
     return require_admin(get_current_user(credentials)).username
 
 
-# ---------- 6. Login rate limit ----------
+# ---------- 6. Rate limiting ----------
+
+class RateLimiter:
+    """General in-memory sliding-window limiter. Remembers the timestamps of
+    recent hits per key (e.g. a client IP) and raises RateLimitError once a key
+    goes over `max_hits` within `window_seconds`. In-memory on purpose: simple,
+    and it resets when the server restarts."""
+
+    def __init__(self, max_hits: int, window_seconds: int, clock=time.monotonic):
+        self.max_hits = max_hits
+        self.window_seconds = window_seconds
+        self._clock = clock
+        self._hits: Dict[str, List[float]] = {}
+
+    def _recent(self, key: str) -> List[float]:
+        cutoff = self._clock() - self.window_seconds
+        recent = [t for t in self._hits.get(key, []) if t > cutoff]
+        self._hits[key] = recent
+        return recent
+
+    def hit(self, key: str, message: str = "Too many requests. Please try again later.") -> None:
+        """Record one request for `key`. If it's already at the cap, record nothing
+        and raise RateLimitError so the caller can return 429."""
+        recent = self._recent(key)
+        if len(recent) >= self.max_hits:
+            raise RateLimitError(message)
+        recent.append(self._clock())
+
+    def reset(self, key: Optional[str] = None) -> None:
+        if key is None:
+            self._hits.clear()
+        else:
+            self._hits.pop(key, None)
+
+
+# ---------- 7. Login rate limit ----------
 
 class LoginRateLimiter:
     """Remember wrong passwords per username. After LOGIN_MAX_FAILURES within

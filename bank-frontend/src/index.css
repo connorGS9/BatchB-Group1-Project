@@ -156,6 +156,21 @@ button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .demo { color: var(--muted); font-size: 0.85rem; margin-top: 24px; text-align: center; }
 .demo.switch-door { margin-top: 8px; }
 .demo.switch-door a { color: var(--brand); font-weight: 600; }
+
+/* ---------- Open-account application (public /apply) ---------- */
+.apply-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.apply-field { display: flex; flex-direction: column; min-width: 0; }
+/* A calm, non-alarming notice (e.g. "your application is already in review") */
+.notice {
+  background: #eef4f2; color: var(--text);
+  border: 1px solid var(--line); border-left: 3px solid var(--brand);
+  padding: 10px 12px; border-radius: 8px; margin: -4px 0 16px; font-size: 0.92rem;
+}
+.apply-done h1 { font-size: 1.6rem; font-weight: 700; }
+
+@media (max-width: 520px) {
+  .apply-grid { grid-template-columns: 1fr; }
+}
 code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
 
 /* ---------- Home ---------- */
@@ -287,3 +302,37 @@ input:disabled { background: var(--bg); color: var(--muted); }
 @media (max-width: 520px) {
   .pay-controls select { width: 100%; }
 }
+
+/* ---------- Admin: account applications (/applications) ---------- */
+.topbar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.app-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.app-head h2 { font-size: 1.15rem; margin: 0; }
+
+.approve-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+.approve-row label { margin-bottom: 0; }
+.approve-row input { width: 130px; margin-bottom: 0; }
+
+.decline-box { margin-top: 16px; display: flex; flex-direction: column; }
+.decline-box textarea {
+  font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface); color: var(--text); width: 100%; resize: vertical; margin-bottom: 12px;
+}
+.decline-box textarea:focus { outline: 2px solid var(--brand); outline-offset: 1px; border-color: var(--brand); }
+button.danger-btn {
+  font: inherit; font-weight: 600; background: var(--error); color: #fff;
+  border: 0; border-radius: 8px; padding: 12px 18px; cursor: pointer;
+}
+button.danger-btn:hover:not(:disabled) { background: #8f1c14; }
+
+.log-list { list-style: none; margin: 0; padding: 0; }
+.log-item {
+  display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 14px 0; border-top: 1px solid var(--line);
+}
+.log-item:first-child { border-top: 0; }
+.log-who { margin: 0; font-weight: 500; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.log-meta { margin: 4px 0 0; font-size: 0.9rem; color: var(--muted); }
+.log-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 0.85rem; white-space: nowrap; }
+.tag { font-size: 0.72rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; }
+.tag-ok { background: #e7f4ef; color: var(--brand); }
+.tag-no { background: var(--error-bg); color: var(--error); }

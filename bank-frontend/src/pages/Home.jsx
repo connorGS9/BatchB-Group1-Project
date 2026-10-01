@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getAllAccounts, getCustomer, getMyAccounts, getMyTransactions, getToken } from '../api/authService.js'
+import { useAuth } from '../auth.jsx'
 import Accounts from '../components/Accounts.jsx'
 import Dashboard from '../components/Dashboard.jsx'
 import SendMoney from '../components/SendMoney.jsx'
@@ -12,7 +13,8 @@ const TABS = [
   { id: 'settings', label: 'Settings' },
 ]
 
-export default function Home({ user, onLogout }) {
+export default function Home() {
+  const { user, logout } = useAuth()
   const isAdmin = user.role === 'ADMIN'
   const [tab, setTab] = useState('accounts')
   const [customer, setCustomer] = useState(null)
@@ -50,7 +52,7 @@ export default function Home({ user, onLogout }) {
     <div className="home-page">
       <header className="topbar">
         <span className="brand-small">Three Musketeers United</span>
-        <button type="button" className="secondary" onClick={onLogout}>
+        <button type="button" className="secondary" onClick={logout}>
           Sign out
         </button>
       </header>

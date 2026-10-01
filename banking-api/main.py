@@ -7,6 +7,7 @@ import uvicorn
 
 from controllers.account_controller import router as account_router
 from controllers.analytics_controller import router as analytics_router
+from controllers.application_controller import router as application_router
 from controllers.auth_controller import router as auth_router
 from controllers.branch_controller import router as branch_router
 from controllers.customer_controller import router as customer_router
@@ -30,6 +31,7 @@ app.include_router(transaction_router)
 app.include_router(branch_router)
 app.include_router(auth_router)
 app.include_router(analytics_router)
+app.include_router(application_router)
 
 STATIC_DIR = Path(__file__).parent / "static"
 

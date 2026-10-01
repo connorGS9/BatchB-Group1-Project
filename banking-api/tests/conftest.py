@@ -37,9 +37,12 @@ from repository.account_repository import AccountRepository  # noqa: E402
 from repository.customer_repository import CustomerRepository  # noqa: E402
 from repository.transaction_repository import TransactionRepository  # noqa: E402
 from repository.branch_repository import BranchRepository  # noqa: E402
+from repository.user_repository import UserRepository  # noqa: E402
+from repository.application_repository import ApplicationRepository  # noqa: E402
 from services.account_service import AccountService  # noqa: E402
 from services.customer_service import CustomerService  # noqa: E402
 from services.transaction_service import TransactionService  # noqa: E402
+from services.application_service import ApplicationService  # noqa: E402
 
 
 # --------------------------------------------------------------------------
@@ -79,10 +82,12 @@ def _seed_documents() -> dict:
             {"id": 2, "from_account_id": 3, "to_account_id": 4, "amount": 500.0, "type": "TRANSFER", "timestamp": datetime(2026, 2, 1, 14, 0, tzinfo=timezone.utc)},
         ],
         "counters": [
+            {"_id": "users", "seq": 2},
             {"_id": "branches", "seq": 3},
             {"_id": "customers", "seq": 5},
             {"_id": "accounts", "seq": 5},
             {"_id": "transactions", "seq": 2},
+            {"_id": "applications", "seq": 0},
         ],
     }
 
@@ -91,7 +96,7 @@ def _reseed(database) -> None:
     """Wipe every collection and reinsert the seed. Keeps the same db object so
     that default arguments and app singletons captured at import time stay valid."""
     for name in ("users", "sessions", "branches", "customers",
-                 "accounts", "transactions", "counters"):
+                 "accounts", "transactions", "applications", "counters"):
         database[name].delete_many({})
     for name, docs in _seed_documents().items():
         if docs:
@@ -127,6 +132,16 @@ def branch_repo(fake_db):
     return BranchRepository(database=fake_db)
 
 
+@pytest.fixture
+def user_repo(fake_db):
+    return UserRepository(database=fake_db)
+
+
+@pytest.fixture
+def application_repo(fake_db):
+    return ApplicationRepository(database=fake_db)
+
+
 # --- Services wired to those repositories ---------------------------------
 
 @pytest.fixture
@@ -142,6 +157,13 @@ def customer_service(customer_repo):
 @pytest.fixture
 def transaction_service(transaction_repo, account_service):
     return TransactionService(transaction_repo, account_service)
+
+
+@pytest.fixture
+def application_service(application_repo, customer_service, account_service,
+                       user_repo, customer_repo, branch_repo):
+    return ApplicationService(application_repo, customer_service, account_service,
+                              user_repo, customer_repo, branch_repo)
 
 
 # --- FastAPI TestClient, whose singletons share the same fake database -----
