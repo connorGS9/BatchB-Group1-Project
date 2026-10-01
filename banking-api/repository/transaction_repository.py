@@ -3,6 +3,8 @@
 # "transactions" collection. Filters become a MongoDB query, e.g.
 #   ?start_date=2026-01-01&type=TRANSFER
 #   -> {"timestamp": {"$gte": 2026-01-01 00:00}, "type": "TRANSFER"}
+# A customer's view adds an $or on from/to account, which Mongo answers from the
+# {from_account_id, timestamp} and {to_account_id, timestamp} indexes (see db.py).
 from datetime import date, datetime, time
 from typing import List, Optional
 
@@ -17,8 +19,15 @@ class TransactionRepository:
         self._transactions = database["transactions"]
 
     def list_all(self, start_date: Optional[date] = None,
-                 type: Optional[TransactionType] = None) -> List[Transaction]:
+                 type: Optional[TransactionType] = None,
+                 account_ids: Optional[List[int]] = None) -> List[Transaction]:
+        """account_ids: only transactions sent from or to one of these accounts."""
         query = {}
+        if account_ids is not None:
+            query["$or"] = [
+                {"from_account_id": {"$in": account_ids}},
+                {"to_account_id": {"$in": account_ids}},
+            ]
         if start_date is not None:
             query["timestamp"] = {"$gte": datetime.combine(start_date, time.min)}
         if type is not None:

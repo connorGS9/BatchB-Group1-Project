@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { sendMoney } from '../api/authService.js'
+import BalanceChart from './BalanceChart.jsx'
 import { money } from './format.js'
 
 // A small "glance + act" dashboard shown above the detailed tabs on the
-// customer home: quick stats, a 30-day money-flow bar, and one-tap pay for
+// customer home: quick stats, a 30-day balance chart and money-flow bar, and one-tap pay for
 // recent recipients. Everything here is backed by the real API (same calls the
 // tabs use).
 
@@ -132,6 +133,8 @@ export default function Dashboard({ accounts, directory, transactions, onDone })
           <span className="stat-value">{money(outgoing)}</span>
         </li>
       </ul>
+
+      <BalanceChart transactions={transactions} myIds={myIds} currentBalance={total} />
 
       <section className="panel flow-card">
         <h2>Money flow · last 30 days</h2>

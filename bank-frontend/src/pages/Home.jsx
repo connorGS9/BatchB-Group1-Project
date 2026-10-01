@@ -5,6 +5,7 @@ import Accounts from '../components/Accounts.jsx'
 import Dashboard from '../components/Dashboard.jsx'
 import SendMoney from '../components/SendMoney.jsx'
 import Settings from '../components/Settings.jsx'
+import ThemeToggle from '../components/ThemeToggle.jsx'
 
 const TABS = [
   { id: 'accounts', label: 'Accounts' },
@@ -50,9 +51,12 @@ export default function Home() {
     <div className="home-page">
       <header className="topbar">
         <span className="brand-small">Three Musketeers United</span>
-        <button type="button" className="secondary" onClick={logout}>
-          Sign out
-        </button>
+        <div className="topbar-actions">
+          <ThemeToggle />
+          <button type="button" className="secondary" onClick={logout}>
+            Sign out
+          </button>
+        </div>
       </header>
 
       <main className="home-card">
