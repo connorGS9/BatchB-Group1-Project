@@ -167,6 +167,17 @@ input {
   width: 100%;
 }
 input:focus { outline: 2px solid var(--brand-ink); outline-offset: 1px; border-color: var(--brand-ink); }
+/* Browsers paint saved-password autofill pale yellow/blue, ignoring the theme.
+   An inset shadow covers that background; the text colour needs its own override. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface) inset;
+  box-shadow: 0 0 0 1000px var(--surface) inset;
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  transition: background-color 9999s ease-out 0s;
+}
 
 .password-row { position: relative; }
 .password-row input { padding-right: 64px; }
