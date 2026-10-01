@@ -54,7 +54,13 @@ class CustomerService:
         return saved
 
     def deactivate_customer(self, customer_id: int) -> Customer:
-        """DELETE = deactivate: soft-delete by flipping is_active to False."""
+        """DELETE = deactivate: soft-delete by flipping is_active to False.
+        Deactivating a customer also deactivates their accounts, so an inactive
+        customer can't be left with active accounts that still move money."""
         customer = self.get_customer(customer_id)
         updated = customer.model_copy(update={"is_active": False})
-        return self._repo.update(updated)
+        saved = self._repo.update(updated)
+
+        for account in self._accounts.list_all(customer_id=customer_id):
+            self._accounts.update(account.model_copy(update={"is_active": False}))
+        return saved

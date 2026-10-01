@@ -26,8 +26,9 @@ branch_repository = BranchRepository()
 #     customer's accounts, which keep a copy of the name) ---
 customer_service = CustomerService(customer_repository, account_repository)
 
-# --- Accounts (shares the customer repository to enforce the customer link) ---
-account_service = AccountService(account_repository, customer_repository)
+# --- Accounts (shares the customer and branch repositories to enforce the
+#     customer link and reject unknown/closed branches) ---
+account_service = AccountService(account_repository, customer_repository, branch_repository)
 
 # --- Transactions (depends on the shared account_service) ---
 transaction_repository = TransactionRepository()

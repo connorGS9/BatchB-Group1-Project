@@ -56,9 +56,9 @@ def test_create_account_unknown_customer_rejected(account_service):
 # --------------------------------------------------------------------------
 # BUG #8 — an account can be opened for an INACTIVE customer. create_account only
 # checks the customer exists, not that they are active.
+# FIXED #8: create_account() now rejects an inactive customer, not just a missing
+# one. Changed AccountService.create_account in services/account_service.py.
 # --------------------------------------------------------------------------
-@pytest.mark.xfail(reason="BUG #8: accounts can be opened for an inactive customer",
-                   strict=True)
 def test_cannot_open_account_for_inactive_customer(account_service, customer_repo):
     inactive = customer_repo.get(1).model_copy(update={"is_active": False})
     customer_repo.update(inactive)
@@ -71,9 +71,10 @@ def test_cannot_open_account_for_inactive_customer(account_service, customer_rep
 # --------------------------------------------------------------------------
 # BUG #8 — an account can be opened against a branch that does not exist.
 # AccountService never validates branch_id (it has no branch repository).
+# FIXED #8: AccountService now takes a branch repository and create_account()
+# rejects a branch that doesn't exist or is inactive. Changed AccountService in
+# services/account_service.py; wired in dependencies.py.
 # --------------------------------------------------------------------------
-@pytest.mark.xfail(reason="BUG #8: accounts can be opened for a nonexistent branch",
-                   strict=True)
 def test_cannot_open_account_for_nonexistent_branch(account_service):
     data = AccountCreate(customer_id=1, first_name="John", last_name="Doe",
                          balance=0.0, branch_id=999)
