@@ -2,7 +2,10 @@
 // Use the "localhost" hostname (not the 127.0.0.1 literal): it resolves to both
 // IPv4 and IPv6 so the browser can fall back between them, which keeps the whole
 // app on one consistent host.
-const API_URL = 'http://localhost:8000/api/v1'
+// Single source of truth for the backend origin, so the API base and the
+// health check can't drift apart on a deploy/port change.
+export const API_ORIGIN = 'http://localhost:8000'
+const API_URL = `${API_ORIGIN}/api/v1`
 const TOKEN_KEY = 'bank_token'
 
 export function getToken() {
@@ -27,9 +30,23 @@ async function request(path, options = {}) {
   if (res.status === 204) return null
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
-    // FastAPI puts the message in "detail" (a string, or a list for validation errors)
-    const detail = Array.isArray(data.detail) ? data.detail[0]?.msg : data.detail
-    throw new Error(detail || `Request failed (${res.status})`)
+    // FastAPI puts the message in "detail": a string for business errors, or a
+    // list of {loc, msg} for 422 validation errors. Name the field for each so
+    // the message says what's wrong, not just "String should match pattern …".
+    let detail
+    if (Array.isArray(data.detail)) {
+      detail = data.detail
+        .map((d) => {
+          const field = Array.isArray(d.loc) ? d.loc[d.loc.length - 1] : null
+          return field && field !== 'body' ? `${field}: ${d.msg}` : d.msg
+        })
+        .join('; ')
+    } else {
+      detail = data.detail
+    }
+    const err = new Error(detail || `Request failed (${res.status})`)
+    err.status = res.status // lets callers tell e.g. 409 "already pending" from a real error
+    throw err
   }
   return data
 }
@@ -100,6 +117,94 @@ export async function sendMoney(fromAccountId, toAccountId, amount) {
     method: 'POST',
     body: JSON.stringify({ from_account_id: fromAccountId, to_account_id: toAccountId, amount }),
   })
+}
+
+// ---------- Account applications (public: no login needed) ----------
+
+// Active branches for the application form's dropdown
+export async function getPublicBranches() {
+  return request('/applications/branches')
+}
+
+// Submit a request to open an account. The backend holds it as PENDING until an
+// admin approves or declines it. Throws Error(message) on 400/409/429 etc.
+export async function submitApplication(payload) {
+  return request('/applications/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+// ---------- Account applications (admin: needs an admin login token) ----------
+
+// All applications, or just one status (e.g. 'PENDING'). Admin only.
+export async function getApplications(status) {
+  const query = status ? `?status=${encodeURIComponent(status)}` : ''
+  return request(`/applications/${query}`)
+}
+
+// Approve an application -> provisions customer + account + login. Admin only.
+export async function approveApplication(id, openingBalance) {
+  return request(`/applications/${id}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ opening_balance: openingBalance }),
+  })
+}
+
+// Decline an application, with an optional reason kept on the record. Admin only.
+export async function declineApplication(id, note) {
+  return request(`/applications/${id}/decline`, {
+    method: 'POST',
+    body: JSON.stringify({ note }),
+  })
+}
+
+// ---------- Admin data (accounts / customers / transactions). Admin only. ----------
+
+function qs(params = {}) {
+  const pairs = Object.entries(params).filter(([, v]) => v !== '' && v != null)
+  const s = new URLSearchParams(pairs).toString()
+  return s ? `?${s}` : ''
+}
+
+// Full account list with balances (admin view), optionally filtered by
+// customer_id / branch_id / min_balance.
+export async function getAccounts(params) {
+  return request(`/accounts/${qs(params)}`)
+}
+
+export async function getCustomers() {
+  return request('/customers/')
+}
+
+// Transaction ledger, optionally filtered by start_date / type.
+export async function getTransactions(params) {
+  return request(`/transactions/${qs(params)}`)
+}
+
+// Branches (admin). Public callers use getPublicBranches instead.
+export async function getBranches() {
+  return request('/branches/')
+}
+
+// Accounts — create/edit/deactivate (admin).
+export async function createAccount(data) {
+  return request('/accounts/', { method: 'POST', body: JSON.stringify(data) })
+}
+export async function updateAccount(id, changes) {
+  return request(`/accounts/${id}`, { method: 'PUT', body: JSON.stringify(changes) })
+}
+export async function deactivateAccount(id) {
+  return request(`/accounts/${id}`, { method: 'DELETE' })
+}
+
+// Customers — create/deactivate (admin). updateCustomer already exists above
+// (shared with the customer Settings page).
+export async function createCustomer(data) {
+  return request('/customers/', { method: 'POST', body: JSON.stringify(data) })
+}
+export async function deactivateCustomer(id) {
+  return request(`/customers/${id}`, { method: 'DELETE' })
 }
 
 // Transactions that touch any of these accounts, newest first

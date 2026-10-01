@@ -16,6 +16,7 @@ class CustomerCreate(BaseModel):
     last_name: Name
     email: Email
     phone: Phone
+    address: Optional[str] = None
 
     class Config:
         json_schema_extra = {
@@ -50,6 +51,7 @@ class Customer(BaseModel):
     last_name: str
     email: str
     phone: str
+    address: Optional[str] = None
     is_active: bool = True
 
     class Config:

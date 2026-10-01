@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { login, logout } from '../api/authService.js'
+import { useAuth } from '../auth.jsx'
 import BrandSlideshow from '../components/BrandSlideshow.jsx'
 
 // One sign-in form, two doors:
@@ -8,7 +10,9 @@ import BrandSlideshow from '../components/BrandSlideshow.jsx'
 // The role comes from the server (inside the JWT), so the check below is just to
 // send people to the right page. The API itself still blocks customers from admin
 // routes with 403, whatever page they used.
-export default function Login({ onLogin, admin = false }) {
+export default function Login({ admin = false }) {
+  const { setUser } = useAuth()
+  const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -36,7 +40,8 @@ export default function Login({ onLogin, admin = false }) {
         setError('Administrators sign in at /adminlogin.')
         return
       }
-      onLogin(user)
+      setUser(user)
+      navigate(isAdmin ? '/admin' : '/', { replace: true })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -124,8 +129,13 @@ export default function Login({ onLogin, admin = false }) {
               <>Demo login: <code>john</code> / <code>password123</code></>
             )}
           </p>
+          {!admin && (
+            <p className="demo switch-door">
+              New here? <Link to="/apply">Request to open an account</Link>
+            </p>
+          )}
           <p className="demo switch-door">
-            {admin ? <a href="/">Customer sign in</a> : <a href="/adminlogin">Bank staff? Admin sign in</a>}
+            {admin ? <Link to="/">Customer sign in</Link> : <Link to="/adminlogin">Bank staff? Admin sign in</Link>}
           </p>
         </form>
 
