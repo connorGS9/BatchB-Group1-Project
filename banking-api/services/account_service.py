@@ -6,15 +6,19 @@ from typing import List, Optional
 from errors import NotFoundError, ValidationError
 from models.account import Account, AccountCreate, AccountUpdate
 from repository.account_repository import AccountRepository
+from repository.branch_repository import BranchRepository
 from repository.customer_repository import CustomerRepository
 
 
 class AccountService:
     def __init__(self, repository: AccountRepository = None,
-                 customer_repository: CustomerRepository = None):
+                 customer_repository: CustomerRepository = None,
+                 branch_repository: BranchRepository = None):
         self._repo = repository or AccountRepository()
-        # Used to verify an account's customer_id points at a real customer.
+        # Used to verify an account's customer_id points at a real, active customer.
         self._customers = customer_repository
+        # Used to verify an account's branch_id points at a real, active branch.
+        self._branches = branch_repository or BranchRepository()
 
     def list_accounts(self, branch_id: Optional[int] = None,
                       min_balance: Optional[float] = None,
@@ -31,8 +35,16 @@ class AccountService:
     def create_account(self, data: AccountCreate) -> Account:
         if data.balance < 0:
             raise ValidationError("Opening balance cannot be negative")
-        if self._customers is not None and self._customers.get(data.customer_id) is None:
-            raise ValidationError(f"Customer {data.customer_id} does not exist")
+        if self._customers is not None:
+            customer = self._customers.get(data.customer_id)
+            if customer is None:
+                raise ValidationError(f"Customer {data.customer_id} does not exist")
+            if not customer.is_active:
+                raise ValidationError(f"Customer {data.customer_id} is inactive")
+        # The branch must exist and be open to accept new accounts.
+        branch = self._branches.get(data.branch_id)
+        if branch is None or not branch.is_active:
+            raise ValidationError(f"Branch {data.branch_id} does not exist or is inactive")
         account = Account(id=0, account_number="", is_active=True, **data.model_dump())
         return self._repo.add(account)
 
@@ -54,8 +66,9 @@ class AccountService:
         account = self.get_account(account_id)
         if not account.is_active:
             raise ValidationError(f"Account {account_id} is inactive")
-        new_balance = account.balance + delta
-        if new_balance < 0:
+        # Move the money through the repository's single atomic operation rather than
+        # a read-modify-write, so overlapping changes can't clobber each other.
+        updated = self._repo.adjust_balance(account_id, delta)
+        if updated is None:
             raise ValidationError(f"Insufficient funds in account {account_id}")
-        updated = account.model_copy(update={"balance": new_balance})
-        return self._repo.update(updated)
+        return updated

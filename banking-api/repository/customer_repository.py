@@ -34,5 +34,8 @@ class CustomerRepository:
         return customer
 
     def next_id(self) -> int:
-        counter = self._db["counters"].find_one({"_id": "customers"})
-        return (counter["seq"] if counter else 0) + 1
+        # Hand out the next customer id through the shared ATOMIC counter. The old
+        # read-the-seq-then-add-1 was two separate steps, so two callers could read
+        # the same seq and both return the same id. counters.next_id uses a single
+        # atomic $inc, so every caller gets a different number.
+        return next_id("customers", self._db)

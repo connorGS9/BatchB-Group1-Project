@@ -30,9 +30,11 @@ def test_update_customer_to_existing_email_rejected(customer_service):
 # --------------------------------------------------------------------------
 # BUG #7 — accounts copy the customer's first/last name, so renaming a customer
 # leaves their account name stale.
+# FIXED #7: update_customer() now copies any name change onto the customer's
+# accounts, so their stored names stay in sync. Changed CustomerService (it now
+# takes an account repository) in services/customer_service.py; wired in
+# dependencies.py.
 # --------------------------------------------------------------------------
-@pytest.mark.xfail(reason="BUG #7: renaming a customer leaves the account name stale",
-                   strict=True)
 def test_customer_rename_propagates_to_account(customer_service, account_repo):
     customer_service.update_customer(1, CustomerUpdate(first_name="Jonathan"))
     # Account #1 belongs to customer #1; its name should reflect the rename.
@@ -42,9 +44,10 @@ def test_customer_rename_propagates_to_account(customer_service, account_repo):
 # --------------------------------------------------------------------------
 # BUG #8 — deactivating a customer does NOT deactivate their accounts, so an
 # inactive customer keeps active accounts that can still move money.
+# FIXED #8: deactivate_customer() now also deactivates that customer's accounts,
+# so no active accounts are left behind. Changed CustomerService.deactivate_customer
+# in services/customer_service.py.
 # --------------------------------------------------------------------------
-@pytest.mark.xfail(reason="BUG #8: deactivating a customer leaves their accounts active",
-                   strict=True)
 def test_deactivating_customer_deactivates_their_accounts(customer_service, account_repo):
     customer_service.deactivate_customer(1)
     assert account_repo.get(1).is_active is False

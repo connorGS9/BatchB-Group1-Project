@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getAllAccounts, getCustomer, getMyAccounts, getMyTransactions, getToken } from '../api/authService.js'
 import Accounts from '../components/Accounts.jsx'
+import Dashboard from '../components/Dashboard.jsx'
 import SendMoney from '../components/SendMoney.jsx'
 import Settings from '../components/Settings.jsx'
 
@@ -48,7 +49,7 @@ export default function Home({ user, onLogout }) {
   return (
     <div className="home-page">
       <header className="topbar">
-        <span className="brand-small">Group 1 Bank</span>
+        <span className="brand-small">Three Musketeers United</span>
         <button type="button" className="secondary" onClick={onLogout}>
           Sign out
         </button>
@@ -73,6 +74,13 @@ export default function Home({ user, onLogout }) {
 
         {!isAdmin && customer && (
           <>
+            <Dashboard
+              accounts={accounts}
+              directory={allAccounts}
+              transactions={transactions}
+              onDone={load}
+            />
+
             <nav className="tabs" aria-label="Sections">
               {TABS.map((t) => (
                 <button

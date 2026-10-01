@@ -17,20 +17,24 @@ from services.customer_service import CustomerService
 from services.transaction_service import TransactionService
 from security import LoginRateLimiter
 
-# --- Customers (built first so accounts can validate customer_id against them) ---
+# --- Shared repositories (built first so the services below can share them) ---
 customer_repository = CustomerRepository()
-customer_service = CustomerService(customer_repository)
-
-# --- Accounts (shares the customer repository to enforce the customer link) ---
 account_repository = AccountRepository()
-account_service = AccountService(account_repository, customer_repository)
+branch_repository = BranchRepository()
+
+# --- Customers (shares the account repository so a rename/deactivate reaches the
+#     customer's accounts, which keep a copy of the name) ---
+customer_service = CustomerService(customer_repository, account_repository)
+
+# --- Accounts (shares the customer and branch repositories to enforce the
+#     customer link and reject unknown/closed branches) ---
+account_service = AccountService(account_repository, customer_repository, branch_repository)
 
 # --- Transactions (depends on the shared account_service) ---
 transaction_repository = TransactionRepository()
 transaction_service = TransactionService(transaction_repository, account_service)
 
 # --- Branches ---
-branch_repository = BranchRepository()
 branch_service = BranchService(branch_repository)
 
 # --- Login ---

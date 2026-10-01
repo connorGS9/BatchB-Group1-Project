@@ -57,13 +57,17 @@ def test_next_id_increments_sequentially(fake_db):
 # --------------------------------------------------------------------------
 # BUG #3 — AccountRepository.update() does $set on the WHOLE document, so saving
 # a stale copy silently clobbers a balance that changed in the meantime.
+# FIXED #3: AccountRepository.update() no longer writes the balance field; balance
+# now moves only through the new atomic AccountRepository.adjust_balance(), so a
+# stale save keeps its other fields but can't overwrite a newer balance.
+# Setup line changed from account_repo.update(...balance=16000) to
+# account_repo.adjust_balance(2, 1000.0): update() no longer writes balance, so the
+# deposit has to go through the atomic method. The assertion is unchanged.
 # --------------------------------------------------------------------------
-@pytest.mark.xfail(reason="BUG #3: update() $set of the whole doc overwrites a newer balance",
-                   strict=True)
 def test_stale_update_must_not_clobber_newer_balance(account_repo):
     stale = account_repo.get(2)                       # read balance 15000
     # A concurrent deposit lands and is persisted: balance is now 16000.
-    account_repo.update(account_repo.get(2).model_copy(update={"balance": 16000.0}))
+    account_repo.adjust_balance(2, 1000.0)
     # The holder of the stale copy saves an unrelated change (a rename).
     account_repo.update(stale.model_copy(update={"first_name": "Renamed"}))
     # The deposit must survive. Today it is overwritten back to 15000.
@@ -74,8 +78,10 @@ def test_stale_update_must_not_clobber_newer_balance(account_repo):
 # BUG #9 — CustomerRepository.next_id() reads seq and adds 1 without $inc, so it
 # is not atomic and hands out the SAME id twice. It is also unused (add() uses
 # the atomic counters.next_id instead).
+# FIXED #9: next_id() did a read-then-add-1 (two steps), so back-to-back calls
+# both returned 6. It now delegates to the shared atomic counter (a single $inc),
+# so each call returns a new id. Changed CustomerRepository.next_id in
+# repository/customer_repository.py.
 # --------------------------------------------------------------------------
-@pytest.mark.xfail(reason="BUG #9: customer_repository.next_id() is non-atomic and returns duplicates",
-                   strict=True)
 def test_customer_repo_next_id_is_unique(customer_repo):
     assert customer_repo.next_id() != customer_repo.next_id()
