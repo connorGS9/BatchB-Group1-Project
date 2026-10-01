@@ -54,8 +54,9 @@ class AccountService:
         account = self.get_account(account_id)
         if not account.is_active:
             raise ValidationError(f"Account {account_id} is inactive")
-        new_balance = account.balance + delta
-        if new_balance < 0:
+        # Move the money through the repository's single atomic operation rather than
+        # a read-modify-write, so overlapping changes can't clobber each other.
+        updated = self._repo.adjust_balance(account_id, delta)
+        if updated is None:
             raise ValidationError(f"Insufficient funds in account {account_id}")
-        updated = account.model_copy(update={"balance": new_balance})
-        return self._repo.update(updated)
+        return updated

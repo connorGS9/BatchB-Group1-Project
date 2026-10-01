@@ -4,6 +4,8 @@
 #   ?branch_id=1&min_balance=1000  ->  {"branch_id": 1, "balance": {"$gte": 1000}}
 from typing import List, Optional
 
+from pymongo import ReturnDocument
+
 from db import db
 from models.account import Account
 from repository.counters import next_id
@@ -37,5 +39,30 @@ class AccountRepository:
         return account
 
     def update(self, account: Account) -> Account:
-        self._accounts.update_one({"id": account.id}, {"$set": account.model_dump()})
+        # Never write the balance here. update() saves a whole copy of the account,
+        # which may be stale; writing its balance would silently overwrite a change
+        # the atomic path made in the meantime (BUG #3). Balance is owned solely by
+        # adjust_balance() below.
+        changes = account.model_dump()
+        changes.pop("balance", None)
+        self._accounts.update_one({"id": account.id}, {"$set": changes})
         return account
+
+    def adjust_balance(self, account_id: int, delta: float) -> Optional[Account]:
+        """Atomically add `delta` to an account's balance in ONE database operation.
+        The money only moves if the account is active and (for a withdrawal) still
+        has enough funds, so two overlapping changes can never lose or clobber each
+        other. Returns the updated account, or None if the guard was not met
+        (missing/inactive account, or insufficient funds)."""
+        query = {"id": account_id, "is_active": True}
+        if delta < 0:
+            query["balance"] = {"$gte": -delta}
+        doc = self._accounts.find_one_and_update(
+            query,
+            {"$inc": {"balance": delta}},
+            return_document=ReturnDocument.AFTER,
+        )
+        if doc is None:
+            return None
+        doc.pop("_id", None)
+        return Account(**doc)
