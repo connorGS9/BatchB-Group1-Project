@@ -154,6 +154,8 @@ button:disabled { opacity: 0.65; cursor: default; }
 button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 
 .demo { color: var(--muted); font-size: 0.85rem; margin-top: 24px; text-align: center; }
+.demo.switch-door { margin-top: 8px; }
+.demo.switch-door a { color: var(--brand); font-weight: 600; }
 code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
 
 /* ---------- Home ---------- */

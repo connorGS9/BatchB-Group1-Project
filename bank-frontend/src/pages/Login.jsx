@@ -1,8 +1,14 @@
 import { useState } from 'react'
-import { login } from '../api/authService.js'
+import { login, logout } from '../api/authService.js'
 import BrandSlideshow from '../components/BrandSlideshow.jsx'
 
-export default function Login({ onLogin }) {
+// One sign-in form, two doors:
+//   /            -> customers only
+//   /adminlogin  -> bank admins only  (admin = true)
+// The role comes from the server (inside the JWT), so the check below is just to
+// send people to the right page. The API itself still blocks customers from admin
+// routes with 403, whatever page they used.
+export default function Login({ onLogin, admin = false }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -19,6 +25,17 @@ export default function Login({ onLogin }) {
     setLoading(true)
     try {
       const user = await login(username.trim(), password)
+      const isAdmin = user.role === 'ADMIN'
+      if (admin && !isAdmin) {
+        await logout()
+        setError('This sign-in is for bank administrators only. Customers sign in on the main page.')
+        return
+      }
+      if (!admin && isAdmin) {
+        await logout()
+        setError('Administrators sign in at /adminlogin.')
+        return
+      }
       onLogin(user)
     } catch (err) {
       setError(err.message)
@@ -55,8 +72,9 @@ export default function Login({ onLogin }) {
       <main className="login-panel">
         <div className="login-stack">
         <form className="login-form" onSubmit={handleSubmit} noValidate>
-          <h1>Sign in</h1>
-          <p className="subtitle">Welcome back.</p>
+          {admin && <p className="eyebrow">Administrator</p>}
+          <h1>{admin ? 'Admin sign in' : 'Sign in'}</h1>
+          <p className="subtitle">{admin ? 'Bank staff only.' : 'Welcome back.'}</p>
 
           <label htmlFor="username">Username</label>
           <input
@@ -100,11 +118,18 @@ export default function Login({ onLogin }) {
           </button>
 
           <p className="demo">
-            Demo logins: <code>john</code> / <code>password123</code> · <code>admin</code> /{' '}
-            <code>admin123</code>
+            {admin ? (
+              <>Demo login: <code>admin</code> / <code>admin123</code></>
+            ) : (
+              <>Demo login: <code>john</code> / <code>password123</code></>
+            )}
+          </p>
+          <p className="demo switch-door">
+            {admin ? <a href="/">Customer sign in</a> : <a href="/adminlogin">Bank staff? Admin sign in</a>}
           </p>
         </form>
 
+        {!admin && (
         <div className="login-features">
           <ul className="feature-list">
             <li className="feature">
@@ -150,6 +175,7 @@ export default function Login({ onLogin }) {
             </li>
           </ul>
         </div>
+        )}
         </div>
       </main>
     </div>
