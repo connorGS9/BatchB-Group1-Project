@@ -51,9 +51,16 @@ class TransactionService:
             raise ValidationError(
                 f"Insufficient funds in account {data.from_account_id}")
 
-        # Move the money, then record the entry.
-        self._accounts.adjust_balance(data.from_account_id, -data.amount)
-        self._accounts.adjust_balance(data.to_account_id, data.amount)
+        # Move the money, then record the entry. There are no Mongo transactions
+        # here, so if a later step fails we undo what already happened by hand, so a
+        # half-finished transfer never loses or creates money.
+        self._accounts.adjust_balance(data.from_account_id, -data.amount)  # debit
+        try:
+            self._accounts.adjust_balance(data.to_account_id, data.amount)  # credit
+        except Exception:
+            # Credit failed; give the sender their money back.
+            self._accounts.adjust_balance(data.from_account_id, data.amount)
+            raise
 
         transaction = Transaction(
             id=0,
@@ -63,4 +70,10 @@ class TransactionService:
             type=TransactionType.TRANSFER,
             timestamp=datetime.now(),
         )
-        return self._repo.add(transaction)
+        try:
+            return self._repo.add(transaction)
+        except Exception:
+            # The ledger write failed after both balances moved; reverse both sides.
+            self._accounts.adjust_balance(data.to_account_id, -data.amount)
+            self._accounts.adjust_balance(data.from_account_id, data.amount)
+            raise

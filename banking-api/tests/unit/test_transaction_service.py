@@ -74,9 +74,12 @@ def test_transfer_to_missing_account_raises_not_found(transaction_service):
 # has vanished. We simulate the mid-transfer crash by making the second balance
 # write raise. (mongomock cannot exercise a real Mongo transaction; a real-Mongo
 # integration test is proposed for that.)
+# FIXED #4: transfer() now debits the sender, then wraps the credit (and the
+# ledger write) in try/except; if either fails it undoes what already happened
+# (refunds the sender, and reverses the receiver too if the ledger failed) and
+# re-raises, so no money is lost or created. Changed TransactionService.transfer in
+# services/transaction_service.py.
 # --------------------------------------------------------------------------
-@pytest.mark.xfail(reason="BUG #4: transfer is not atomic; a failed credit loses the debit",
-                   strict=True)
 def test_failed_transfer_does_not_lose_money(transaction_service, account_service,
                                              account_repo, monkeypatch):
     real_adjust = account_service.adjust_balance
