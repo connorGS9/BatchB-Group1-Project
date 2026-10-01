@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
+from pymongo.errors import PyMongoError
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 

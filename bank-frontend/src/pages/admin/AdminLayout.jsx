@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { API_ORIGIN } from '../../api/authService.js'
 import { useAuth } from '../../auth.jsx'
+import ThemeToggle from '../../components/ThemeToggle.jsx'
 
 const NAV = [
   { to: '/admin', label: 'Overview', end: true },
@@ -50,6 +51,7 @@ export default function AdminLayout() {
             <span className={`health-dot ${health === null ? '' : health ? 'ok' : 'bad'}`} />
             {health === null ? 'checking…' : health ? 'API online' : 'API offline'}
           </span>
+          <ThemeToggle />
           <button type="button" className="secondary" onClick={logout}>Sign out</button>
         </div>
       </header>

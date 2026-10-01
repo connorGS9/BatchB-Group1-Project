@@ -206,15 +206,15 @@ button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 
 .demo { color: var(--muted); font-size: 0.85rem; margin-top: 24px; text-align: center; }
 .demo.switch-door { margin-top: 8px; }
-.demo.switch-door a { color: var(--brand); font-weight: 600; }
+.demo.switch-door a { color: var(--brand-ink); font-weight: 600; }
 
 /* ---------- Open-account application (public /apply) ---------- */
 .apply-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 .apply-field { display: flex; flex-direction: column; min-width: 0; }
 /* A calm, non-alarming notice (e.g. "your application is already in review") */
 .notice {
-  background: #eef4f2; color: var(--text);
-  border: 1px solid var(--line); border-left: 3px solid var(--brand);
+  background: var(--brand-soft); color: var(--text);
+  border: 1px solid var(--line); border-left: 3px solid var(--brand-ink);
   padding: 10px 12px; border-radius: 8px; margin: -4px 0 16px; font-size: 0.92rem;
 }
 .apply-done h1 { font-size: 1.6rem; font-weight: 700; }
@@ -236,7 +236,7 @@ code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 0
   padding: 16px 24px; background: var(--surface); border-bottom: 1px solid var(--line);
 }
 .brand-small { font-weight: 700; color: var(--brand-ink); }
-.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .theme-toggle {
   display: grid; place-items: center; width: 38px; height: 38px; padding: 0;
   font: inherit; background: none; color: var(--muted); cursor: pointer;
@@ -395,7 +395,6 @@ input:disabled { background: var(--bg); color: var(--muted); }
 }
 
 /* ---------- Admin: account applications (/applications) ---------- */
-.topbar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .app-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .app-head h2 { font-size: 1.15rem; margin: 0; }
 
@@ -408,7 +407,7 @@ input:disabled { background: var(--bg); color: var(--muted); }
   font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
   background: var(--surface); color: var(--text); width: 100%; resize: vertical; margin-bottom: 12px;
 }
-.decline-box textarea:focus { outline: 2px solid var(--brand); outline-offset: 1px; border-color: var(--brand); }
+.decline-box textarea:focus { outline: 2px solid var(--brand-ink); outline-offset: 1px; border-color: var(--brand-ink); }
 button.danger-btn {
   font: inherit; font-weight: 600; background: var(--error); color: #fff;
   border: 0; border-radius: 8px; padding: 12px 18px; cursor: pointer;
@@ -425,7 +424,7 @@ button.danger-btn:hover:not(:disabled) { background: #8f1c14; }
 .log-meta { margin: 4px 0 0; font-size: 0.9rem; color: var(--muted); }
 .log-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 0.85rem; white-space: nowrap; }
 .tag { font-size: 0.72rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; }
-.tag-ok { background: #e7f4ef; color: var(--brand); }
+.tag-ok { background: var(--brand-soft); color: var(--brand-ink); }
 .tag-no { background: var(--error-bg); color: var(--error); }
 
 /* ---------- Admin shell (/admin/*) ---------- */
@@ -438,7 +437,7 @@ button.danger-btn:hover:not(:disabled) { background: #8f1c14; }
 
 .health { display: inline-flex; align-items: center; gap: 7px; font-size: 0.85rem; color: var(--muted); }
 .health-dot { width: 9px; height: 9px; border-radius: 999px; background: var(--muted); }
-.health-dot.ok { background: var(--brand); }
+.health-dot.ok { background: var(--brand-ink); }
 .health-dot.bad { background: var(--error); }
 
 .admin-nav {
@@ -450,13 +449,13 @@ button.danger-btn:hover:not(:disabled) { background: #8f1c14; }
   border-bottom: 2px solid transparent; margin-bottom: -1px;
 }
 .admin-tab:hover { color: var(--text); }
-.admin-tab.active { color: var(--brand); border-bottom-color: var(--brand); }
+.admin-tab.active { color: var(--brand-ink); border-bottom-color: var(--brand-ink); }
 
 .admin-main { max-width: 1000px; }
 .admin-tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-top: 20px; }
 .stat-value.alert { color: var(--error); }
 .overview-cta { margin-top: 18px; }
-.overview-cta a { color: var(--brand); font-weight: 600; }
+.overview-cta a { color: var(--brand-ink); font-weight: 600; }
 
 /* ---------- Admin tables + forms (accounts/customers/transactions) ---------- */
 .admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 4px; }
@@ -468,8 +467,8 @@ button.danger-btn:hover:not(:disabled) { background: #8f1c14; }
 
 .row-actions { display: flex; gap: 6px; justify-content: flex-end; white-space: nowrap; }
 .btn-sm { font: inherit; font-weight: 600; font-size: 0.8rem; padding: 5px 10px; border-radius: 7px; cursor: pointer; background: transparent; }
-.btn-edit { border: 1px solid var(--brand); color: var(--brand); }
-.btn-edit:hover { background: #e7f4ef; }
+.btn-edit { border: 1px solid var(--brand-ink); color: var(--brand-ink); }
+.btn-edit:hover { background: var(--brand-soft); }
 .btn-danger { border: 1px solid var(--error); color: var(--error); }
 .btn-danger:hover { background: var(--error-bg); }
 
