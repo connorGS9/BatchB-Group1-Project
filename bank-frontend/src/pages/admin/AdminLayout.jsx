@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import { API_ORIGIN } from '../../api/authService.js'
 import { useAuth } from '../../auth.jsx'
 
 const NAV = [
@@ -16,7 +17,7 @@ function useHealth() {
   useEffect(() => {
     let alive = true
     const check = () =>
-      fetch('http://localhost:8000/health')
+      fetch(`${API_ORIGIN}/health`)
         .then((r) => r.ok)
         .catch(() => false)
         .then((up) => { if (alive) setOk(up) })

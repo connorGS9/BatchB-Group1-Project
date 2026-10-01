@@ -12,6 +12,7 @@ export default function AdminCustomers() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [msg, setMsg] = useState('')
+  const [confirmingId, setConfirmingId] = useState(null) // row awaiting deactivate confirm
 
   const load = useCallback(async () => {
     try {
@@ -66,9 +67,10 @@ export default function AdminCustomers() {
 
   async function deactivate(c) {
     setError('')
+    setConfirmingId(null)
     try {
       await deactivateCustomer(c.id)
-      setMsg(`Deactivated customer #${c.id}`)
+      setMsg(`Deactivated customer #${c.id} (and their accounts)`)
       await load()
     } catch (err) {
       setError(err.message)
@@ -116,8 +118,17 @@ export default function AdminCustomers() {
                 <td><span className={c.is_active ? 'tag tag-ok' : 'tag tag-no'}>{c.is_active ? 'active' : 'inactive'}</span></td>
                 <td>
                   <div className="row-actions">
-                    <button type="button" className="btn-sm btn-edit" onClick={() => startEdit(c)}>Edit</button>
-                    {c.is_active && <button type="button" className="btn-sm btn-danger" onClick={() => deactivate(c)}>Deactivate</button>}
+                    {confirmingId === c.id ? (
+                      <>
+                        <button type="button" className="btn-sm btn-danger" onClick={() => deactivate(c)}>Confirm</button>
+                        <button type="button" className="btn-sm btn-edit" onClick={() => setConfirmingId(null)}>Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <button type="button" className="btn-sm btn-edit" onClick={() => startEdit(c)}>Edit</button>
+                        {c.is_active && <button type="button" className="btn-sm btn-danger" onClick={() => setConfirmingId(c.id)}>Deactivate</button>}
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

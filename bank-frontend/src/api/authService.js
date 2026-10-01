@@ -2,7 +2,10 @@
 // Use the "localhost" hostname (not the 127.0.0.1 literal): it resolves to both
 // IPv4 and IPv6 so the browser can fall back between them, which keeps the whole
 // app on one consistent host.
-const API_URL = 'http://localhost:8000/api/v1'
+// Single source of truth for the backend origin, so the API base and the
+// health check can't drift apart on a deploy/port change.
+export const API_ORIGIN = 'http://localhost:8000'
+const API_URL = `${API_ORIGIN}/api/v1`
 const TOKEN_KEY = 'bank_token'
 
 export function getToken() {

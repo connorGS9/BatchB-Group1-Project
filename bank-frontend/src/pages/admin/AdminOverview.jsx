@@ -13,7 +13,8 @@ export default function AdminOverview() {
       .then(([accounts, customers, transactions, pending]) => {
         setStats({
           accounts: accounts.length,
-          balance: accounts.reduce((sum, a) => sum + a.balance, 0),
+          // Headline funds = live money, so exclude deactivated accounts.
+          balance: accounts.filter((a) => a.is_active).reduce((sum, a) => sum + a.balance, 0),
           customers: customers.length,
           transactions: transactions.length,
           pending: pending.length,
