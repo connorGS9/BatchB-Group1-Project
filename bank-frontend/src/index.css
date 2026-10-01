@@ -168,6 +168,12 @@ button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 }
 .apply-done h1 { font-size: 1.6rem; font-weight: 700; }
 
+/* Inline per-field validation messages */
+.field-error { color: var(--error); font-size: 0.82rem; margin: -8px 0 12px; }
+.apply-field .field-error { margin: 4px 0 0; }
+input.input-error, select.input-error { border-color: var(--error); }
+input.input-error:focus, select.input-error:focus { outline-color: var(--error); }
+
 @media (max-width: 520px) {
   .apply-grid { grid-template-columns: 1fr; }
 }

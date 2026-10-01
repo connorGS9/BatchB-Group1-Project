@@ -30,8 +30,20 @@ async function request(path, options = {}) {
   if (res.status === 204) return null
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
-    // FastAPI puts the message in "detail" (a string, or a list for validation errors)
-    const detail = Array.isArray(data.detail) ? data.detail[0]?.msg : data.detail
+    // FastAPI puts the message in "detail": a string for business errors, or a
+    // list of {loc, msg} for 422 validation errors. Name the field for each so
+    // the message says what's wrong, not just "String should match pattern …".
+    let detail
+    if (Array.isArray(data.detail)) {
+      detail = data.detail
+        .map((d) => {
+          const field = Array.isArray(d.loc) ? d.loc[d.loc.length - 1] : null
+          return field && field !== 'body' ? `${field}: ${d.msg}` : d.msg
+        })
+        .join('; ')
+    } else {
+      detail = data.detail
+    }
     const err = new Error(detail || `Request failed (${res.status})`)
     err.status = res.status // lets callers tell e.g. 409 "already pending" from a real error
     throw err
