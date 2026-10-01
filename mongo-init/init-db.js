@@ -77,14 +77,31 @@ bank.transactions.insertMany([
   { id: 2, from_account_id: 3, to_account_id: 4, amount: 500.0, type: "TRANSFER", timestamp: new Date("2026-02-01T14:00:00Z") },
 ]);
 
+// ---------- Account applications ----------
+// A prospective customer submits one of these from the public /apply page; an
+// admin approves (which provisions a customer + account + login) or declines it.
+bank.createCollection("applications");
+bank.applications.createIndex({ id: 1 }, { unique: true });
+bank.applications.createIndex({ status: 1 });
+// At most one PENDING application per email, so near-simultaneous submits can't
+// both create a duplicate. Declined/approved rows don't count toward this.
+bank.applications.createIndex(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { status: "PENDING" } }
+);
+
 // ---------- Counters ----------
 // Next id for each collection (like auto-increment in SQL). Starts at the last seeded id.
+// "users" is here so approvals can mint new logins without colliding with the two
+// seeded users; "applications" starts at 0 (none seeded).
 bank.createCollection("counters");
 bank.counters.insertMany([
+  { _id: "users", seq: 2 },
   { _id: "branches", seq: 3 },
   { _id: "customers", seq: 5 },
   { _id: "accounts", seq: 5 },
   { _id: "transactions", seq: 2 },
+  { _id: "applications", seq: 0 },
 ]);
 
 print(

@@ -20,4 +20,9 @@ class ForbiddenError(Exception):
 
 
 class RateLimitError(Exception):
-    """Raised after too many wrong passwords (-> 429 Too Many Requests)."""
+    """Raised after too many requests in a window (-> 429 Too Many Requests)."""
+
+
+class ConflictError(Exception):
+    """Raised when a request clashes with existing state, e.g. a second account
+    application while one is still pending (-> 409 Conflict)."""
