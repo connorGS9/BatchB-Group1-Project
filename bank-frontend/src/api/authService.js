@@ -4,7 +4,9 @@
 // app on one consistent host.
 // Single source of truth for the backend origin, so the API base and the
 // health check can't drift apart on a deploy/port change.
-export const API_ORIGIN = 'http://localhost:8000'
+// On AWS the build sets VITE_API_ORIGIN to the API Gateway URL (see deploy/README.md);
+// on your laptop it falls back to the local backend.
+export const API_ORIGIN = import.meta.env.VITE_API_ORIGIN || 'http://localhost:8000'
 const API_URL = `${API_ORIGIN}/api/v1`
 const TOKEN_KEY = 'bank_token'
 

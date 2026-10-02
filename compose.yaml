@@ -28,6 +28,7 @@ services:
       MONGO_DB: banking
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}   # signs login tokens (never commit it)
       API_KEY: ${API_KEY:?set API_KEY in .env}            # lets programs read the reports
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}  # sites allowed to call the API (AWS: the CloudFront URL)
     ports:
       - "8000:8000"
     depends_on:

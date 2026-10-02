@@ -11,7 +11,7 @@ from controllers.auth_controller import router as auth_router
 from controllers.branch_controller import router as branch_router
 from controllers.customer_controller import router as customer_router
 from controllers.transaction_controller import router as transaction_router
-from config import HOST, PORT
+from config import CORS_ORIGINS, HOST, PORT
 from db import client, ensure_indexes
 
 
@@ -26,10 +26,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Banking API", lifespan=lifespan)
 
-# Let the React frontend (bank-frontend, runs on port 5173) call this API
+# Let the React frontend call this API from the browser. The allowed sites come
+# from CORS_ORIGINS (config.py): localhost:5173 on your laptop, the CloudFront URL on AWS.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
